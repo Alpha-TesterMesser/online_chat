@@ -81,7 +81,7 @@ const ClientApp = (function () {
       const actions = createEl('div','serverActions');
       const joinBtn = createEl('button');
       joinBtn.textContent = 'Join';
-      joinBtn.addEventListener('click', () => onJoinClick(s));
+      joinBtn.addEventListener('click', (evt) => onJoinClick(s, evt));
       actions.appendChild(joinBtn);
       card.appendChild(info);
       card.appendChild(actions);
@@ -103,29 +103,47 @@ const ClientApp = (function () {
     $('#pwdInput').focus();
   }
 
-  // Attempt /join then redirect to chat (if ok)
-  async function attemptJoin(serverId, password) {
-    try {
-      const user = localStorage.getItem('username');
-      const res = await fetch(`${BACKEND_URL}/join`, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ serverId, username: user, password })
-      });
-      const body = await res.json();
-      if (!res.ok) {
-        const msg = body.error || 'Unable to join';
-        alert(`Error: ${msg}`);
-        if ($('#pwdMsg')) $('#pwdMsg').textContent = `Error: ${msg}`;
-        return;
-      }
-      // success — navigate to chat page
-      window.location = `./chat.html?server=${encodeURIComponent(serverId)}`;
-    } catch (err) {
-      console.error(err);
-      alert('Network error while joining');
-    }
+  // Join click handler — only prompt for password when button clicked (safe version)
+function onJoinClick(srv, evt) {
+  // Optional guard: ensure this came from a real user gesture
+  if (evt && evt.isTrusted === false) {
+    console.warn('Ignored synthetic/non-trusted event for join.');
+    return;
   }
+
+  // clear previous pending join
+  state.pendingJoin = null;
+
+  // If the server is public, attempt immediate join
+  if (!srv.hasPassword) {
+    attemptJoin(srv.id, '');
+    return;
+  }
+
+  // Otherwise prepare modal for password input
+  state.pendingJoin = srv;
+
+  const modal = document.getElementById('pwdModal');
+  const pwdInput = document.getElementById('pwdInput');
+  const pwdMsg = document.getElementById('pwdMsg');
+
+  if (!modal) {
+    console.error('Password modal not found in DOM.');
+    return;
+  }
+
+  // reset modal UI
+  if (pwdInput) pwdInput.value = '';
+  if (pwdMsg) pwdMsg.textContent = '';
+
+  // show modal
+  modal.classList.remove('hidden');
+
+  // focus input on next tick so browsers will focus properly
+  setTimeout(() => {
+    try { pwdInput && pwdInput.focus(); } catch(e){}
+  }, 0);
+}
 
   // Create server
   async function createServer() {
@@ -155,6 +173,44 @@ const ClientApp = (function () {
       $('#createMsg').textContent = 'Network error';
     }
   }
+  // Install password modal handlers (call once during init)
+  function wirePasswordModalButtons() {
+    function pwdSubmitHandler(e) {
+      if (e && e.isTrusted === false) {
+        console.warn('Ignored synthetic submit');
+        return;
+      }
+      const pwd = (document.getElementById('pwdInput') || {}).value || '';
+      const modal = document.getElementById('pwdModal');
+      if (modal) modal.classList.add('hidden');
+  
+      if (!state.pendingJoin) {
+        console.warn('No pending server to join.');
+        return;
+      }
+      attemptJoin(state.pendingJoin.id, pwd);
+      state.pendingJoin = null;
+    }
+  
+    function pwdBackHandler(e) {
+      const modal = document.getElementById('pwdModal');
+      if (modal) modal.classList.add('hidden');
+      state.pendingJoin = null;
+    }
+  
+    const submit = document.getElementById('pwdSubmit');
+    const back = document.getElementById('pwdBack');
+  
+    if (submit) {
+      // remove previous listeners (defensive)
+      submit.removeEventListener('click', pwdSubmitHandler);
+      submit.addEventListener('click', pwdSubmitHandler);
+    }
+    if (back) {
+      back.removeEventListener('click', pwdBackHandler);
+      back.addEventListener('click', pwdBackHandler);
+    }
+  }
 
   // Public interface for servers page init
   async function initServers(opts = {}) {
@@ -174,14 +230,9 @@ const ClientApp = (function () {
     $('#backToJoin').addEventListener('click', () => window.location = './join.html');
 
     // Password modal buttons
-    $('#pwdSubmit').addEventListener('click', () => {
-      const pwd = $('#pwdInput').value || '';
-      $('#pwdModal').classList.add('hidden');
-      if (!state.pendingJoin) return;
-      attemptJoin(state.pendingJoin.id, pwd);
-      state.pendingJoin = null;
-    });
-    $('#pwdBack').addEventListener('click', () => { $('#pwdModal').classList.add('hidden'); state.pendingJoin = null; });
+    // Wire modal once (see wirePasswordModalButtons below)
+    wirePasswordModalButtons();
+
 
     // If socket updates desired: open socket and subscribe to servers list updates
     try {
@@ -289,3 +340,4 @@ const ClientApp = (function () {
     initChat
   };
 })();
+
