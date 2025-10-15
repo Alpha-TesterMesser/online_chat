@@ -140,6 +140,27 @@ const ClientApp = (function () {
     // focus input next tick
     setTimeout(() => { try { pwdInput && pwdInput.focus(); } catch(e){} }, 0);
   }
+  function renderMessage(username, message, time) {
+    const msgEl = document.createElement('div');
+    msgEl.className = 'msg';
+  
+    const currentUser = localStorage.getItem('chatUsername');
+  
+    let tag = '';
+    if (showOwnerTag && isOwner && username === currentUser) {
+      tag = `
+        <span class="owner-tag">
+          👑 Owner
+        </span>
+      `;
+    }
+  
+    msgEl.innerHTML = `
+      <div class="meta">${username} ${tag} • ${time}</div>
+      <div>${message}</div>
+    `;
+    return msgEl;
+  }
 
   // --- Attempt join: call backend /join then navigate to chat ---
   async function attemptJoin(serverId, password) {
@@ -261,6 +282,57 @@ const ClientApp = (function () {
     const svCancel = $('#sv_cancel'); if (svCancel) svCancel.addEventListener('click', () => { $('#createPanel').classList.add('hidden'); $('#createMsg').textContent=''; });
     const svCreate = $('#sv_create'); if (svCreate) svCreate.addEventListener('click', createServer);
     const backBtn = $('#backToJoin'); if (backBtn) backBtn.addEventListener('click', () => window.location = './join.html');
+    
+    const OWNER_PASSWORD = "docs.google.com"; // change this to whatever you want
+
+    const ownerTrigger = document.getElementById('ownerTrigger');
+    const ownerPwdModal = document.getElementById('ownerPwdModal');
+    const ownerPwdInput = document.getElementById('ownerPwdInput');
+    const ownerPwdSubmit = document.getElementById('ownerPwdSubmit');
+    const ownerPwdCancel = document.getElementById('ownerPwdCancel');
+    const ownerPwdMsg = document.getElementById('ownerPwdMsg');
+    
+    const ownerPanel = document.getElementById('ownerPanel');
+    const ownerTagToggle = document.getElementById('ownerTagToggle');
+    const ownerClose = document.getElementById('ownerClose');
+    
+    let isOwner = false;
+    let showOwnerTag = false;
+    
+    // Trigger hidden modal
+    ownerTrigger.addEventListener('click', () => {
+      ownerPwdInput.value = '';
+      ownerPwdMsg.textContent = '';
+      ownerPwdModal.classList.remove('hidden');
+      ownerPwdInput.focus();
+    });
+    
+    // Password submit
+    ownerPwdSubmit.addEventListener('click', () => {
+      if (ownerPwdInput.value === OWNER_PASSWORD) {
+        isOwner = true;
+        ownerPwdModal.classList.add('hidden');
+        ownerPanel.classList.remove('hidden');
+      } else {
+        ownerPwdMsg.textContent = 'Incorrect password';
+      }
+    });
+    
+    // Password cancel
+    ownerPwdCancel.addEventListener('click', () => {
+      ownerPwdModal.classList.add('hidden');
+    });
+    
+    // Owner panel close
+    ownerClose.addEventListener('click', () => {
+      ownerPanel.classList.add('hidden');
+    });
+    
+    // Toggle owner tag
+    ownerTagToggle.addEventListener('change', (e) => {
+      showOwnerTag = e.target.checked;
+    });
+
 
     // password modal wiring
     wirePasswordModalButtons();
@@ -284,6 +356,8 @@ const ClientApp = (function () {
     if (opts.showCreate) $('#createPanel').classList.remove('hidden');
   }
 
+
+  
   // --- Chat page initialization ---
   async function initChat(opts) {
     state.user = localStorage.getItem('username');
@@ -360,3 +434,4 @@ const ClientApp = (function () {
     initChat
   };
 })(); // end ClientApp
+
