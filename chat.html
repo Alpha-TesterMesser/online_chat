@@ -20,6 +20,11 @@
       <button type="submit">Send</button>
       <button type="button" id="leaveBtn" class="secondary">Leave</button>
     </form>
+
+    <div id="missingUserNotice" class="muted" style="margin-top:12px; display:none;">
+      Username missing. Click below to return to entry page.
+      <div><button id="returnToEntry" class="secondary" style="margin-top:8px;">Return to Entry</button></div>
+    </div>
   </main>
 
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -27,14 +32,21 @@
   <script>
     (async function initChat() {
       const user = localStorage.getItem('username');
-      if (!user) { alert('Username missing'); window.location='./index.html'; return; }
+      if (!user) {
+        document.getElementById('missingUserNotice').style.display = 'block';
+        return;
+      }
 
       const params = new URLSearchParams(location.search);
       const serverId = params.get('server');
-      if (!serverId) { alert('Server missing'); window.location='./servers.html'; return; }
+      if (!serverId) { alert('Server missing'); location.href='./servers.html'; return; }
 
       await ClientApp.initChat({ serverId });
     })();
+
+    document.getElementById('returnToEntry').addEventListener('click', () => {
+      try { window.top.location = './index.html'; } catch(e) { location.href = './index.html'; }
+    });
   </script>
 </body>
 </html>
