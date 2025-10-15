@@ -22,28 +22,27 @@
   </main>
 
   <script>
-    // Ensure username exists
     const user = localStorage.getItem('username');
     if (!user) {
       alert('No username set. Return to the main page.');
-      window.location = './index.html';
+      // navigate top-level back to index if needed:
+      try { top.location = './index.html'; } catch(e) { location = './index.html'; }
     } else {
       document.getElementById('welcomeLine').textContent = `You are: ${user}`;
     }
 
     document.getElementById('btnJoin').addEventListener('click', () => {
-      // Open server list page
-      window.location = './servers.html';
+      // stays inside iframe
+      location = './servers.html';
     });
 
     document.getElementById('btnCreate').addEventListener('click', () => {
-      // open servers page and auto-show create form using query param
-      window.location = './servers.html?create=1';
+      location = './servers.html?create=1';
     });
 
     document.getElementById('btnBack').addEventListener('click', () => {
-      // go back to username entry (index)
-      window.location = './index.html';
+      // if user wants to go back to the entry page, navigate top-level (this will replace about:blank)
+      try { top.location = './index.html'; } catch(e) { location = './index.html'; }
     });
   </script>
 </body>
