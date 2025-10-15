@@ -231,6 +231,38 @@ const ClientApp = (function () {
     await fetchServers();
     if (opts.showCreate) $('#createPanel').classList.remove('hidden');
     const me = $('#meLine'); if (me && state.user) me.textContent = `You are: ${state.user}`;
+    // Robust create-panel toggle: toggles inline display and focuses first field
+    (function wireCreateToggle() {
+      const toggleBtn = document.getElementById('toggleCreate');
+      const panel = document.getElementById('createPanel');
+      const nameInput = document.getElementById('sv_name');
+    
+      // Ensure panel starts hidden (inline style) so JS control is consistent
+      if (panel) {
+        panel.style.display = panel.classList.contains('hidden') ? 'none' : (panel.style.display || 'none');
+        // Remove class toggling reliance (keep class for CSS fallback)
+        panel.classList.add('hidden');
+      }
+    
+      if (!toggleBtn || !panel) return;
+    
+      toggleBtn.addEventListener('click', (evt) => {
+        // Defensive: ignore synthetic events
+        if (evt && evt.isTrusted === false) return;
+    
+        const isHidden = panel.style.display === 'none' || panel.classList.contains('hidden');
+        if (isHidden) {
+          panel.style.display = 'block';
+          panel.classList.remove('hidden');
+          // small visual nudge & focus
+          setTimeout(() => { try { nameInput && nameInput.focus(); } catch(e){} }, 50);
+        } else {
+          panel.style.display = 'none';
+          panel.classList.add('hidden');
+        }
+      });
+    })();
+
   }
 
   async function initChat(opts) {
@@ -290,4 +322,5 @@ const ClientApp = (function () {
 
   return { initServers, initChat };
 })();
+
 
