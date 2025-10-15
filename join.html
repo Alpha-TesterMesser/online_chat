@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Chat — Join or Create</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <main class="card">
+    <h1>Join or Create a Server</h1>
+    <p class="muted" id="welcomeLine">Checking username...</p>
+
+    <div class="row">
+      <button id="btnJoin">Join Server</button>
+      <button id="btnCreate">Create Server</button>
+    </div>
+
+    <div style="margin-top:12px;">
+      <button id="btnBack" class="secondary">Back to username</button>
+    </div>
+  </main>
+
+  <script>
+    // Ensure username exists
+    const user = localStorage.getItem('username');
+    if (!user) {
+      alert('No username set. Return to the main page.');
+      window.location = './index.html';
+    } else {
+      document.getElementById('welcomeLine').textContent = `You are: ${user}`;
+    }
+
+    document.getElementById('btnJoin').addEventListener('click', () => {
+      // Open server list page
+      window.location = './servers.html';
+    });
+
+    document.getElementById('btnCreate').addEventListener('click', () => {
+      // open servers page and auto-show create form using query param
+      window.location = './servers.html?create=1';
+    });
+
+    document.getElementById('btnBack').addEventListener('click', () => {
+      // go back to username entry (index)
+      window.location = './index.html';
+    });
+  </script>
+</body>
+</html>

@@ -5,21 +5,11 @@
   <title>Chat — Enter username</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="stylesheet" href="./style.css" />
-  <style>
-    /* small inline styling so page looks OK if you didn't upload style.css yet */
-    body{font-family:system-ui,Arial;margin:0;display:flex;min-height:100vh;align-items:center;justify-content:center;background:#f4f6f8}
-    .card{background:#fff;padding:20px;border-radius:10px;box-shadow:0 8px 30px rgba(2,6,23,0.06);max-width:520px;width:100%}
-    label{display:block;margin-top:8px}
-    input{width:100%;padding:8px;border-radius:8px;border:1px solid #e6e7ea}
-    .row{margin-top:12px;display:flex;gap:8px}
-    button{background:#0b5fff;color:#fff;border:0;padding:9px 12px;border-radius:8px;cursor:pointer}
-    .muted{color:#6b7280;font-size:13px;margin-top:8px}
-  </style>
 </head>
 <body>
   <main class="card" role="main">
     <h1>Welcome</h1>
-    <p class="muted">Enter a username to start. The chat will open in a new blank tab (about:blank) and load the app there.</p>
+    <p class="muted">Enter a username to start. The chat UI will open in a new tab.</p>
 
     <label>
       Username
@@ -27,10 +17,10 @@
     </label>
 
     <div class="row">
-      <button id="enterBtn">Enter Chat</button>
+      <button id="enterBtn">Enter</button>
     </div>
 
-    <small class="muted">The username is stored only while this tab is open and will be cleared on close.</small>
+    <small class="muted">The username is kept in localStorage for this browser tab and removed when the tab closes.</small>
   </main>
 
   <script>
@@ -39,12 +29,11 @@
       try { localStorage.removeItem('username'); } catch (e) {}
     });
 
-    // If username already set (same tab previously), open servers page in a new tab/window
+    // If username already set, open join page in a new tab/window
     (function autoOpenIfSet(){
       try {
         if (localStorage.getItem('username')) {
-          // Use a relative path so it resolves to the same repo subpath
-          const newWin = window.open('./servers.html', '_blank');
+          const newWin = window.open('./join.html', '_blank');
           try { newWin.focus(); } catch(e) {}
         }
       } catch(e){}
@@ -56,13 +45,10 @@
       if (!v) return alert('Please enter a username');
       localStorage.setItem('username', v);
 
-      // Open about:blank then navigate to the servers page relative to current document
-      // Using './servers.html' ensures URL becomes .../online_chat/servers.html
+      // Open about:blank then navigate to relative join page
       const w = window.open('about:blank', '_blank');
-      // navigate the new window to a relative path (works for project sites)
-      try { w.location = './servers.html'; } catch (err) {
-        // if browser blocks, try opening directly
-        window.open('./servers.html', '_blank');
+      try { w.location = './join.html'; } catch (err) {
+        window.open('./join.html', '_blank');
       }
 
       // disable input here to prevent changes in this tab
