@@ -1,15 +1,25 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <title>Chat — Enter username</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="./style.css" />
+  <style>
+    /* small inline styling so page looks OK if you didn't upload style.css yet */
+    body{font-family:system-ui,Arial;margin:0;display:flex;min-height:100vh;align-items:center;justify-content:center;background:#f4f6f8}
+    .card{background:#fff;padding:20px;border-radius:10px;box-shadow:0 8px 30px rgba(2,6,23,0.06);max-width:520px;width:100%}
+    label{display:block;margin-top:8px}
+    input{width:100%;padding:8px;border-radius:8px;border:1px solid #e6e7ea}
+    .row{margin-top:12px;display:flex;gap:8px}
+    button{background:#0b5fff;color:#fff;border:0;padding:9px 12px;border-radius:8px;cursor:pointer}
+    .muted{color:#6b7280;font-size:13px;margin-top:8px}
+  </style>
 </head>
 <body>
-  <main class="card">
+  <main class="card" role="main">
     <h1>Welcome</h1>
-    <p>Enter a username to start (it will be kept while this tab is open).</p>
+    <p class="muted">Enter a username to start. The chat will open in a new blank tab (about:blank) and load the app there.</p>
 
     <label>
       Username
@@ -20,30 +30,41 @@
       <button id="enterBtn">Enter Chat</button>
     </div>
 
-    <small class="muted">This opens the chat in a new blank window.</small>
+    <small class="muted">The username is stored only while this tab is open and will be cleared on close.</small>
   </main>
 
   <script>
-    // When tab/window closes, remove username (session behavior)
+    // Clear username on unload (session behavior)
     window.addEventListener('beforeunload', () => {
       try { localStorage.removeItem('username'); } catch (e) {}
     });
 
-    // If already set (same tab previously), go straight to servers
-    if (localStorage.getItem('username')) {
-      // open in new about:blank
-      const w = window.open('about:blank');
-      w.location = `${location.origin}/servers.html`;
-    }
+    // If username already set (same tab previously), open servers page in a new tab/window
+    (function autoOpenIfSet(){
+      try {
+        if (localStorage.getItem('username')) {
+          // Use a relative path so it resolves to the same repo subpath
+          const newWin = window.open('./servers.html', '_blank');
+          try { newWin.focus(); } catch(e) {}
+        }
+      } catch(e){}
+    })();
 
     const enterBtn = document.getElementById('enterBtn');
     enterBtn.addEventListener('click', () => {
       const v = document.getElementById('usernameInput').value.trim();
       if (!v) return alert('Please enter a username');
       localStorage.setItem('username', v);
-      // open new about:blank then load UI there
-      const w = window.open('about:blank');
-      w.location = `${location.origin}/servers.html`;
+
+      // Open about:blank then navigate to the servers page relative to current document
+      // Using './servers.html' ensures URL becomes .../online_chat/servers.html
+      const w = window.open('about:blank', '_blank');
+      // navigate the new window to a relative path (works for project sites)
+      try { w.location = './servers.html'; } catch (err) {
+        // if browser blocks, try opening directly
+        window.open('./servers.html', '_blank');
+      }
+
       // disable input here to prevent changes in this tab
       enterBtn.disabled = true;
       document.getElementById('usernameInput').disabled = true;
