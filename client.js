@@ -1,6 +1,5 @@
 // client.js
-// Replace this with your backend URL after deploying backend
-const BACKEND_URL = 'https://YOUR_BACKEND_URL'; // e.g. https://my-chat-backend.onrender.com
+const BACKEND_URL = 'https://chat-backend-1-4k6l.onrender.com'; 
 
 const socket = io(BACKEND_URL, { autoConnect: false });
 
