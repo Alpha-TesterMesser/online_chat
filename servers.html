@@ -50,7 +50,6 @@
       <div id="createMsg" class="muted"></div>
     </section>
 
-    <!-- Password modal (hidden until needed) -->
     <div id="pwdModal" class="modal hidden">
       <div class="modal-content">
         <h4>Enter server password</h4>
@@ -69,10 +68,9 @@
   <script>
     (async function init() {
       const user = localStorage.getItem('username');
-      if (!user) { alert('No username; go back.'); window.location='./index.html'; return; }
+      if (!user) { alert('No username; go back.'); try { top.location = './index.html'; } catch(e) { location='./index.html'; } return; }
       document.getElementById('meLine').textContent = `You are: ${user}`;
 
-      // read query param ?create=1 to auto-open create panel
       const params = new URLSearchParams(location.search);
       const create = params.get('create') === '1';
 
