@@ -1,7 +1,5 @@
-/* Dark-mode chat UI stylesheet
-   Replace your existing style.css with this file.
-   Variables: tweak colors in :root if you want different tones.
-*/
+/* style.css — unified dark + light theme */
+/* Dark theme is the default (root). Light overrides live under [data-theme="light"] */
 
 :root{
   --bg: #0b0f12;
@@ -21,14 +19,36 @@
   --pill-radius: 999px;
   --small-gap: 8px;
   --gap: 14px;
+
+  /* subtle page backdrop */
+  --page-bg-grad: radial-gradient(800px 500px at 50% 30%, rgba(124,92,255,0.06), transparent);
+}
+
+/* Light theme overrides */
+:root[data-theme="light"],
+[data-theme="light"] {
+  --bg: #f7fafc;
+  --card: #ffffff;
+  --muted: #6b7280;
+  --text: #0b1220;
+  --accent: #4f46e5;      /* indigo-ish */
+  --accent-2: #06b6d4;    /* teal-ish */
+  --danger: #e11d48;
+  --success: #059669;
+  --glass: rgba(2,6,23,0.02);
+  --glass-2: rgba(2,6,23,0.01);
+  --border: rgba(2,6,23,0.06);
+  --shadow: 0 8px 30px rgba(6,8,15,0.08);
+  --focus: rgba(79,70,229,0.12);
+  --page-bg-grad: radial-gradient(800px 500px at 50% 30%, rgba(79,70,229,0.04), transparent);
 }
 
 /* Global reset & layout */
 * { box-sizing: border-box; }
-html,body{height:100%;margin:0;background:
-  radial-gradient(800px 500px at 50% 30%, rgba(124,92,255,0.06), transparent),
-  var(--bg);
-  color:var(--text);
+html,body{
+  height:100%; margin:0;
+  background: var(--page-bg-grad), var(--bg);
+  color: var(--text);
   font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
   display:flex; align-items:center; justify-content:center; padding:20px;
@@ -36,9 +56,8 @@ html,body{height:100%;margin:0;background:
 
 /* Page card / container */
 .card{
-  width:100%;
-  max-width:1000px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  width:100%; max-width:1000px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding:20px;
@@ -47,7 +66,10 @@ html,body{height:100%;margin:0;background:
 }
 
 /* Headings & text */
-h1{ margin:0 0 6px 0; font-size:clamp(20px, 3.6vw, 28px); line-height:1.05;
+h1{
+  margin:0 0 6px 0;
+  font-size:clamp(20px, 3.6vw, 28px);
+  line-height:1.05;
   background: linear-gradient(90deg, var(--accent), var(--accent-2));
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
@@ -61,7 +83,7 @@ h2,h3{margin:0 0 8px 0;}
 
 /* Inputs, selects, textarea */
 input[type="text"], input[type="password"], input[type="number"], input, textarea, select {
-  background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));
+  background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.002));
   color: var(--text);
   border: 1px solid var(--border);
   padding:10px 12px;
@@ -97,22 +119,25 @@ button.secondary {
   border: 1px solid rgba(255,255,255,0.04);
   box-shadow: none;
 }
-button.ghost {
-  background: transparent; color:var(--muted); border:0; box-shadow:none;
-}
+button.ghost { background: transparent; color:var(--muted); border:0; box-shadow:none; }
 
-/* Links styled like buttons */
-a.btn {
-  display:inline-block; text-decoration:none;
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
-  color:#071018; padding:10px 14px; border-radius:10px; font-weight:600;
+/* Theme toggle button (small) */
+#themeToggle {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,0.04);
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-weight:600;
+  cursor:pointer;
 }
+#themeToggle:hover { box-shadow: 0 8px 18px var(--focus); transform: translateY(-2px); }
 
 /* Server list and cards */
 #list{ display:flex; flex-direction:column; gap:12px; margin-top:12px; }
 .serverCard {
   display:flex; gap:12px; align-items:center; padding:12px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));
+  background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.002));
   border-radius:10px; border:1px solid rgba(255,255,255,0.02);
 }
 .serverInfo{ flex:1; }
@@ -172,7 +197,7 @@ a.btn {
   .chatWindow { height: 44vh; }
 }
 
-/* Nice focus outlines for keyboard users */
+/* Focus outlines for keyboard users */
 :focus { outline: none; box-shadow: 0 6px 18px var(--focus); border-color: var(--accent); }
 
 /* Decorative small helpers */
@@ -191,7 +216,7 @@ a.btn {
 .pill.danger { background: rgba(255,107,107,0.12); color:var(--danger); border:1px solid rgba(255,107,107,0.07); }
 .pill.ok { background: rgba(61,220,132,0.08); color:var(--success); border:1px solid rgba(61,220,132,0.06); }
 
-/* Utility hidden (make sure modal uses this) */
+/* Utility hidden (modal uses this) */
 .hidden { display: none; }
 
 /* Ensure modal.hidden always hides (robust against ordering) */
