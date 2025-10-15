@@ -1,22 +1,34 @@
-// client.js
+// client.js (REPLACE your existing file with this)
+// IMPORTANT: set your backend URL here:
 const BACKEND_URL = 'https://chat-backend-1-4k6l.onrender.com';
+
 // socket instance for chat (created when needed)
 let socket = null;
 
-// Utility helpers
+// DOM helpers
 const $ = (sel) => document.querySelector(sel);
 const createEl = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
 const escapeHtml = (s='') => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-// --- Servers UI logic ---
+// --- App closure ---
 const ClientApp = (function () {
+  // app state
   let state = {
     user: null,
     servers: [],
-    pendingJoin: null, // server object when password required
+    pendingJoin: null // will only be set by onJoinClick (user action)
   };
 
-  // Fetch servers from backend (REST)
+  // --- Utility: ensure modal hidden and pending cleared ---
+  function clearPendingAndHideModal() {
+    state.pendingJoin = null;
+    const modal = document.getElementById('pwdModal');
+    if (modal && !modal.classList.contains('hidden')) modal.classList.add('hidden');
+    const pwdMsg = document.getElementById('pwdMsg');
+    if (pwdMsg) pwdMsg.textContent = '';
+  }
+
+  // --- REST: fetch servers ---
   async function fetchServers() {
     try {
       const res = await fetch(`${BACKEND_URL}/servers`);
@@ -25,12 +37,12 @@ const ClientApp = (function () {
       renderServers();
     } catch (err) {
       console.error(err);
-      // show fallback
-      $('#list').innerHTML = '<div class="muted">Unable to load servers.</div>';
+      const list = $('#list');
+      if (list) list.innerHTML = '<div class="muted">Unable to load servers.</div>';
     }
   }
 
-  // Render server cards with filters/sorting
+  // --- Render server cards ---
   function renderServers() {
     const container = $('#list');
     if (!container) return;
@@ -43,29 +55,29 @@ const ClientApp = (function () {
 
     let list = state.servers.slice();
 
-    // filters
+    // Filters
     list = list.filter(s => {
-      if (!showPublic && !s.hasPassword && !s.hasPassword) return false;
+      if (!showPublic && !s.hasPassword) return false;
       if (!showPrivate && s.hasPassword) return false;
       if (onlyWithSpace && s.occupancy >= s.max) return false;
       if (q) {
         const nameMatch = s.name.toLowerCase().includes(q);
-        const tagsMatch = s.tags.join(' ').toLowerCase().includes(q);
+        const tagsMatch = (s.tags || []).join(' ').toLowerCase().includes(q);
         if (!nameMatch && !tagsMatch) return false;
       }
       if (tagq) {
-        const tags = s.tags.map(t => t.toLowerCase());
+        const tags = (s.tags || []).map(t => t.toLowerCase());
         if (!tags.includes(tagq)) return false;
       }
       return true;
     });
 
-    // sort
+    // Sort
     if (sortBy === 'name') list.sort((a,b)=> a.name.localeCompare(b.name));
     else if (sortBy === 'availability') list.sort((a,b) => ((b.max - b.occupancy) - (a.max - a.occupancy)));
     else list.sort((a,b)=> b.createdAt - a.createdAt); // newest first
 
-    // render
+    // Render
     container.innerHTML = '';
     if (list.length === 0) {
       container.innerHTML = '<div class="muted">No servers found.</div>';
@@ -79,73 +91,92 @@ const ClientApp = (function () {
       info.innerHTML = `<strong>${escapeHtml(s.name)}</strong> • ${escapeHtml(s.creator)}<br/>
         <span class="meta">Tags: ${escapeHtml((s.tags || []).join(', '))} • ${s.hasPassword ? '🔒 Private' : '🌐 Public'} • ${s.occupancy}/${s.max} • Created: ${new Date(s.createdAt).toLocaleString()} (${ageMin} min ago)</span>`;
       const actions = createEl('div','serverActions');
+
+      // Join button: pass the event so we can check evt.isTrusted in handler
       const joinBtn = createEl('button');
       joinBtn.textContent = 'Join';
       joinBtn.addEventListener('click', (evt) => onJoinClick(s, evt));
       actions.appendChild(joinBtn);
+
       card.appendChild(info);
       card.appendChild(actions);
       container.appendChild(card);
     });
   }
 
-  // Join click handler — only prompt for password when button clicked
-  function onJoinClick(srv) {
-    if (!srv.hasPassword) {
-      attemptJoin(srv.id, '');
-      return;
-    }
-    // show password modal
-    state.pendingJoin = srv;
-    $('#pwdInput').value = '';
-    $('#pwdMsg').textContent = '';
-    $('#pwdModal').classList.remove('hidden');
-    $('#pwdInput').focus();
-  }
-
-  // Join click handler — only prompt for password when button clicked (safe version)
+  // --- Secure Join handler (only on user click) ---
   function onJoinClick(srv, evt) {
-    // Optional guard: ensure this came from a real user gesture
+    // Ensure this is a real user interaction when available
     if (evt && evt.isTrusted === false) {
-      console.warn('Ignored synthetic/non-trusted event for join.');
+      console.warn('Ignored synthetic join click');
       return;
     }
-  
-    // clear previous pending join
-    state.pendingJoin = null;
-  
-    // If the server is public, attempt immediate join
+
+    // Clear any previous pending state (defensive)
+    clearPendingAndHideModal();
+
+    // If no password required, attempt immediate join
     if (!srv.hasPassword) {
       attemptJoin(srv.id, '');
       return;
     }
-  
-    // Otherwise prepare modal for password input
+
+    // else set pending join and show password modal
     state.pendingJoin = srv;
-  
+
     const modal = document.getElementById('pwdModal');
     const pwdInput = document.getElementById('pwdInput');
     const pwdMsg = document.getElementById('pwdMsg');
-  
+
     if (!modal) {
-      console.error('Password modal not found in DOM.');
+      console.error('Password modal missing from DOM');
       return;
     }
-  
-    // reset modal UI
+
     if (pwdInput) pwdInput.value = '';
     if (pwdMsg) pwdMsg.textContent = '';
-  
-    // show modal
     modal.classList.remove('hidden');
-  
-    // focus input on next tick so browsers will focus properly
-    setTimeout(() => {
-      try { pwdInput && pwdInput.focus(); } catch(e){}
-    }, 0);
+
+    // focus input next tick
+    setTimeout(() => { try { pwdInput && pwdInput.focus(); } catch(e){} }, 0);
   }
 
-  // Create server
+  // --- Attempt join: call backend /join then navigate to chat ---
+  async function attemptJoin(serverId, password) {
+    try {
+      const user = localStorage.getItem('username');
+      if (!user) { alert('Username missing'); window.location = './index.html'; return; }
+
+      const res = await fetch(`${BACKEND_URL}/join`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ serverId, username: user, password })
+      });
+
+      const body = await res.json();
+      if (!res.ok) {
+        const msg = body.error || 'Unable to join';
+        // show error in modal if visible, else alert
+        const pwdMsg = $('#pwdMsg');
+        if (pwdMsg && !$('#pwdModal').classList.contains('hidden')) pwdMsg.textContent = `Error: ${msg}`;
+        else alert(`Error: ${msg}`);
+        return;
+      }
+
+      // success: navigate to chat page
+      window.location = `./chat.html?server=${encodeURIComponent(serverId)}`;
+    } catch (err) {
+      console.error('attemptJoin error', err);
+      alert('Network error while joining');
+    } finally {
+      // clear pending so stale state doesn't show modal
+      state.pendingJoin = null;
+      const modal = document.getElementById('pwdModal');
+      if (modal && !modal.classList.contains('hidden')) modal.classList.add('hidden');
+    }
+  }
+
+  // --- Create server ---
   async function createServer() {
     const name = $('#sv_name').value.trim();
     const tags = $('#sv_tags').value.trim();
@@ -166,95 +197,94 @@ const ClientApp = (function () {
       }
       $('#createMsg').textContent = 'Server created';
       $('#createPanel').classList.add('hidden');
-      // refresh list
       await fetchServers();
     } catch (err) {
       console.error(err);
       $('#createMsg').textContent = 'Network error';
     }
   }
-  // Install password modal handlers (call once during init)
+
+  // --- Password modal wiring (centralized) ---
   function wirePasswordModalButtons() {
-    function pwdSubmitHandler(e) {
+    // handlers declared so removeEventListener works (defensive)
+    function submitHandler(e) {
       if (e && e.isTrusted === false) {
         console.warn('Ignored synthetic submit');
         return;
       }
-      const pwd = (document.getElementById('pwdInput') || {}).value || '';
-      const modal = document.getElementById('pwdModal');
+      const pwd = ($('#pwdInput') && $('#pwdInput').value) || '';
+      const modal = $('#pwdModal');
       if (modal) modal.classList.add('hidden');
-  
+
       if (!state.pendingJoin) {
-        console.warn('No pending server to join.');
+        console.warn('No pendingJoin on submit');
         return;
       }
       attemptJoin(state.pendingJoin.id, pwd);
       state.pendingJoin = null;
     }
-  
-    function pwdBackHandler(e) {
-      const modal = document.getElementById('pwdModal');
+    function backHandler() {
+      const modal = $('#pwdModal');
       if (modal) modal.classList.add('hidden');
       state.pendingJoin = null;
     }
-  
-    const submit = document.getElementById('pwdSubmit');
-    const back = document.getElementById('pwdBack');
-  
-    if (submit) {
-      // remove previous listeners (defensive)
-      submit.removeEventListener('click', pwdSubmitHandler);
-      submit.addEventListener('click', pwdSubmitHandler);
+
+    const submitBtn = $('#pwdSubmit');
+    const backBtn = $('#pwdBack');
+    if (submitBtn) {
+      submitBtn.removeEventListener('click', submitHandler);
+      submitBtn.addEventListener('click', submitHandler);
     }
-    if (back) {
-      back.removeEventListener('click', pwdBackHandler);
-      back.addEventListener('click', pwdBackHandler);
+    if (backBtn) {
+      backBtn.removeEventListener('click', backHandler);
+      backBtn.addEventListener('click', backHandler);
     }
   }
 
-  // Public interface for servers page init
+  // --- Public init for servers page ---
   async function initServers(opts = {}) {
     state.user = localStorage.getItem('username');
     if (!state.user) { alert('Username missing'); window.location='./index.html'; return; }
 
-    // wire UI events
-    $('#search').addEventListener('input', renderServers);
-    $('#tagFilter').addEventListener('input', renderServers);
-    $('#sortBy').addEventListener('change', renderServers);
-    $('#filterPublic').addEventListener('change', renderServers);
-    $('#filterPrivate').addEventListener('change', renderServers);
-    $('#filterHasSpace').addEventListener('change', renderServers);
-    $('#toggleCreate').addEventListener('click', () => $('#createPanel').classList.toggle('hidden'));
-    $('#sv_cancel').addEventListener('click', () => { $('#createPanel').classList.add('hidden'); $('#createMsg').textContent=''; });
-    $('#sv_create').addEventListener('click', createServer);
-    $('#backToJoin').addEventListener('click', () => window.location = './join.html');
+    // Defensive: hide password modal and clear pending any time we init
+    clearPendingAndHideModal();
 
-    // Password modal buttons
-    // Wire modal once (see wirePasswordModalButtons below)
+    // wire UI events
+    const sSearch = $('#search'); if (sSearch) sSearch.addEventListener('input', renderServers);
+    const sTag = $('#tagFilter'); if (sTag) sTag.addEventListener('input', renderServers);
+    const sSort = $('#sortBy'); if (sSort) sSort.addEventListener('change', renderServers);
+    const fPublic = $('#filterPublic'); if (fPublic) fPublic.addEventListener('change', renderServers);
+    const fPrivate = $('#filterPrivate'); if (fPrivate) fPrivate.addEventListener('change', renderServers);
+    const fHasSpace = $('#filterHasSpace'); if (fHasSpace) fHasSpace.addEventListener('change', renderServers);
+
+    const toggleCreate = $('#toggleCreate'); if (toggleCreate) toggleCreate.addEventListener('click', () => $('#createPanel').classList.toggle('hidden'));
+    const svCancel = $('#sv_cancel'); if (svCancel) svCancel.addEventListener('click', () => { $('#createPanel').classList.add('hidden'); $('#createMsg').textContent=''; });
+    const svCreate = $('#sv_create'); if (svCreate) svCreate.addEventListener('click', createServer);
+    const backBtn = $('#backToJoin'); if (backBtn) backBtn.addEventListener('click', () => window.location = './join.html');
+
+    // password modal wiring
     wirePasswordModalButtons();
 
-
-    // If socket updates desired: open socket and subscribe to servers list updates
+    // Setup socket for live server updates (optional)
     try {
       socket = io(BACKEND_URL, { autoConnect: true });
       socket.on('servers-updated', (list) => {
         state.servers = list;
         renderServers();
       });
-      // ask for list if socket didn't push anything
       socket.emit && socket.emit('request-servers');
     } catch (e) {
       console.warn('Socket not available for server updates', e);
     }
 
-    // fetch once
+    // initial load
     await fetchServers();
 
-    // show create panel if requested via query param
+    // show create panel if requested
     if (opts.showCreate) $('#createPanel').classList.remove('hidden');
   }
 
-  // --- Chat page logic ---
+  // --- Chat page initialization ---
   async function initChat(opts) {
     state.user = localStorage.getItem('username');
     if (!state.user) { alert('Username missing'); window.location='./index.html'; return; }
@@ -262,7 +292,9 @@ const ClientApp = (function () {
     const serverId = opts.serverId;
     if (!serverId) { alert('No server'); window.location = './servers.html'; return; }
 
-    // create socket and hook events
+    // ensure modal not visible
+    clearPendingAndHideModal();
+
     socket = io(BACKEND_URL, { autoConnect: false });
     socket.connect();
 
@@ -270,27 +302,14 @@ const ClientApp = (function () {
       socket.emit('join-room', { serverId, username: state.user });
     });
 
-    socket.on('joined-ok', (d) => {
-      addSystem(`Joined server`);
-    });
+    socket.on('joined-ok', () => addSystem(`Joined server`));
+    socket.on('join-error', (d) => { alert('Error: ' + (d.error || 'Join failed')); window.location = './servers.html'; });
+    socket.on('chat-message', (m) => addChatMessage(m));
+    socket.on('system-message', (m) => addSystem(m.text || m));
 
-    socket.on('join-error', (d) => {
-      alert('Error: ' + (d.error || 'Join failed'));
-      window.location = './servers.html';
-    });
-
-    socket.on('chat-message', (m) => {
-      addChatMessage(m);
-    });
-
-    socket.on('system-message', (m) => {
-      addSystem(m.text || m);
-    });
-
-    // message sending
     $('#msgForm').addEventListener('submit', (e) => {
       e.preventDefault();
-      const txt = $('#msgInput').value.trim();
+      const txt = ($('#msgInput') && $('#msgInput').value.trim()) || '';
       if (!txt) return;
       socket.emit('send-message', { serverId, text: txt });
       $('#msgInput').value = '';
@@ -302,7 +321,7 @@ const ClientApp = (function () {
       window.location = './servers.html';
     });
 
-    // show server meta (if available from REST)
+    // optionally display server meta
     try {
       const res = await fetch(`${BACKEND_URL}/servers`);
       if (res.ok) {
@@ -311,16 +330,15 @@ const ClientApp = (function () {
         if (s) {
           $('#roomTitle').textContent = s.name;
           $('#roomMeta').textContent = `Created by ${s.creator} • ${s.occupancy}/${s.max} occupants`;
-        } else {
-          $('#roomTitle').textContent = 'Chat Room';
         }
       }
     } catch(e){}
   }
 
-  // DOM helpers for chat messages
+  // Chat helpers
   function addChatMessage(m) {
     const area = $('#messages');
+    if (!area) return;
     const d = createEl('div','msg');
     d.innerHTML = `<div class="meta">${escapeHtml(m.username)} • ${new Date(m.ts).toLocaleTimeString()}</div>
                    <div>${escapeHtml(m.text)}</div>`;
@@ -329,16 +347,16 @@ const ClientApp = (function () {
   }
   function addSystem(text) {
     const area = $('#messages');
+    if (!area) return;
     const d = createEl('div','msg');
     d.innerHTML = `<div class="meta">[system]</div><div>${escapeHtml(text)}</div>`;
     area.appendChild(d);
     area.scrollTop = area.scrollHeight;
   }
 
+  // public API
   return {
     initServers,
     initChat
   };
-})();
-
-
+})(); // end ClientApp
