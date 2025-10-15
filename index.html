@@ -13,25 +13,18 @@
     .row{margin-top:12px;display:flex;gap:8px}
     button{background:#0b5fff;color:#fff;border:0;padding:9px 12px;border-radius:8px;cursor:pointer}
     .muted{color:#6b7280;font-size:13px;margin-top:8px}
-  </style>
+  </style><header style="display:flex; justify-content:space-between; align-items:center;">
+  <div>
+    <h1>Main</h1>
+    <div id="meLine" class="muted"></div>
+  </div>
+  <div style="display:flex; gap:8px; align-items:center;">
+    <button id="themeToggle" class="secondary" aria-pressed="false" title="Toggle theme">
+      🌙 Dark
+    </button>
+  </div>
+</header>
 </head>
-<script>
-  (function(){
-    const saved = localStorage.getItem('theme');
-    const systemPrefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
-    const defaultTheme = saved || (systemPrefersLight ? 'light' : 'dark');
-    document.documentElement.setAttribute('data-theme', defaultTheme);
-
-    // If you want the entry page toggle button there, add the same small update logic or reuse the global toggleTheme
-    window.toggleTheme = function() {
-      const current = document.documentElement.getAttribute('data-theme') || 'dark';
-      const next = current === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
-      localStorage.setItem('theme', next);
-      const b = document.getElementById('themeToggle'); if (b) b.textContent = (next==='dark' ? '☀️ Light' : '🌙 Dark');
-    };
-  })();
-</script>
 
 <body>
   <main class="card" role="main">
@@ -129,4 +122,5 @@
   </script>
 </body>
 </html>
+
 
