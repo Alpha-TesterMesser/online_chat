@@ -1,4 +1,4 @@
-// client.js (iframe-friendly)
+// client.js (fixed, iframe-friendly)
 // Replace with your backend URL:
 const BACKEND_URL = 'https://chat-backend-1-4k6l.onrender.com';
 
@@ -47,21 +47,22 @@ const escapeHtml = (s='') => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<'
 const ClientApp = (function () {
   let state = { user: null, servers: [], pendingJoin: null };
 
-  // fetch servers
+  /* ---------------------------
+     Servers: fetch / render
+     --------------------------- */
   async function fetchServers() {
     try {
       const res = await fetch(`${BACKEND_URL}/servers`);
-      if (!res.ok) throw new Error('Failed');
+      if (!res.ok) throw new Error('Failed to fetch servers');
       state.servers = await res.json();
       renderServers();
     } catch (e) {
-      console.error(e);
+      console.error('fetchServers error', e);
       const list = $('#list');
       if (list) list.innerHTML = '<div class="muted">Unable to load servers.</div>';
     }
   }
 
-  // render servers
   function renderServers() {
     const container = $('#list'); if (!container) return;
     const q = ($('#search') && $('#search').value.trim().toLowerCase()) || '';
@@ -72,6 +73,7 @@ const ClientApp = (function () {
     const sortBy = $('#sortBy') ? $('#sortBy').value : 'created';
 
     let list = state.servers.slice();
+
     list = list.filter(s => {
       if (!showPublic && !s.hasPassword) return false;
       if (!showPrivate && s.hasPassword) return false;
@@ -82,14 +84,14 @@ const ClientApp = (function () {
         if (!nameMatch && !tagsMatch) return false;
       }
       if (tagq) {
-        const tags = (s.tags || []).map(t=>t.toLowerCase());
+        const tags = (s.tags || []).map(t => t.toLowerCase());
         if (!tags.includes(tagq)) return false;
       }
       return true;
     });
 
     if (sortBy === 'name') list.sort((a,b)=> a.name.localeCompare(b.name));
-    else if (sortBy === 'availability') list.sort((a,b) => ((b.max - b.occupancy) - (a.max - a.occupancy)));
+    else if (sortBy === 'availability') list.sort((a,b)=> ((b.max - b.occupancy) - (a.max - a.occupancy)));
     else list.sort((a,b)=> b.createdAt - a.createdAt);
 
     container.innerHTML = '';
@@ -112,25 +114,38 @@ const ClientApp = (function () {
     });
   }
 
-  async function fetchServers() {
-    try {
-      const res = await fetch(`${BACKEND_URL}/servers`);
-      if (!res.ok) throw new Error('Failed');
-      state.servers = await res.json();
-      renderServers();
-    } catch(e) {
-      console.error(e);
-      $('#list') && ($('#list').innerHTML = '<div class="muted">Unable to load servers.</div>');
-    }
-  }
-
+  /* ---------------------------
+     Modal helpers
+     --------------------------- */
   function clearModalAndPending() {
     state.pendingJoin = null;
-    const modal = $('#pwdModal'); if (modal && !modal.classList.contains('hidden')) modal.classList.add('hidden');
+    const modal = $('#pwdModal'); modal && modal.classList.add('hidden');
     const msg = $('#pwdMsg'); if (msg) msg.textContent = '';
   }
 
-  // join click
+  function wirePwdModal() {
+    const submit = $('#pwdSubmit'), back = $('#pwdBack');
+    if (submit) {
+      submit.addEventListener('click', (e) => {
+        if (e && e.isTrusted === false) return;
+        const pwd = ($('#pwdInput') && $('#pwdInput').value) || '';
+        const modal = $('#pwdModal'); modal && modal.classList.add('hidden');
+        if (!state.pendingJoin) return;
+        attemptJoin(state.pendingJoin.id, pwd);
+        state.pendingJoin = null;
+      });
+    }
+    if (back) {
+      back.addEventListener('click', () => {
+        const modal = $('#pwdModal'); modal && modal.classList.add('hidden');
+        state.pendingJoin = null;
+      });
+    }
+  }
+
+  /* ---------------------------
+     Join / Create actions
+     --------------------------- */
   function onJoinClick(srv, evt) {
     if (evt && evt.isTrusted === false) { console.warn('Ignored synthetic'); return; }
     clearModalAndPending();
@@ -163,7 +178,7 @@ const ClientApp = (function () {
       // navigate inside iframe
       location.href = `./chat.html?server=${encodeURIComponent(serverId)}`;
     } catch (err) {
-      console.error(err);
+      console.error('attemptJoin error', err);
       alert('Network error while joining');
     } finally {
       state.pendingJoin = null;
@@ -172,11 +187,11 @@ const ClientApp = (function () {
   }
 
   async function createServer() {
-    const name = $('#sv_name').value.trim();
-    const tags = $('#sv_tags').value.trim();
-    const max = Math.max(1, Number($('#sv_max').value) || 8);
-    const password = $('#sv_pass').value || '';
-    if (!name) { $('#createMsg').textContent = 'Name required'; return; }
+    const name = ($('#sv_name') && $('#sv_name').value.trim()) || '';
+    const tags = ($('#sv_tags') && $('#sv_tags').value.trim()) || '';
+    const max = Math.max(1, Number($('#sv_max') && $('#sv_max').value) || 8);
+    const password = ($('#sv_pass') && $('#sv_pass').value) || '';
+    if (!name) { $('#createMsg') && ($('#createMsg').textContent = 'Name required'); return; }
     try {
       const res = await fetch(`${BACKEND_URL}/servers`, {
         method: 'POST',
@@ -184,77 +199,56 @@ const ClientApp = (function () {
         body: JSON.stringify({ name, creator: state.user, tags, max, password })
       });
       const body = await res.json();
-      if (!res.ok) { $('#createMsg').textContent = body.error || 'Create failed'; return; }
-      $('#createMsg').textContent = 'Server created';
-      $('#createPanel').classList.add('hidden');
+      if (!res.ok) {
+        $('#createMsg') && ($('#createMsg').textContent = body.error || 'Create failed');
+        return;
+      }
+      $('#createMsg') && ($('#createMsg').textContent = 'Server created');
+      // hide panel (both inline style and class)
+      const panel = document.getElementById('createPanel');
+      if (panel) { panel.style.display = 'none'; panel.classList.add('hidden'); }
       await fetchServers();
-    } catch(e) { console.error(e); $('#createMsg').textContent = 'Network error'; }
+    } catch(e) {
+      console.error('createServer error', e);
+      $('#createMsg') && ($('#createMsg').textContent = 'Network error');
+    }
   }
 
-  function clearModalAndPending() {
-    state.pendingJoin = null;
-    const modal = $('#pwdModal'); modal && modal.classList.add('hidden');
-    const msg = $('#pwdMsg';) // intentional harmless guard removed? fix below
-  }
-
-  // wire modal handlers
-  function wirePwdModal() {
-    const submit = $('#pwdSubmit'), back = $('#pwdBack');
-    function submitHandler(e){ if (e && e.isTrusted === false) return; const pwd = ($('#pwdInput') && $('#pwdInput').value) || ''; const modal = $('#pwdModal'); modal && modal.classList.add('hidden'); if (!state.pendingJoin) return; attemptJoin(state.pendingJoin.id, pwd); state.pendingJoin = null; }
-    function backHandler(){ const modal = $('#pwdModal'); modal && modal.classList.add('hidden'); state.pendingJoin = null; }
-    if (submit) { submit.removeEventListener('click', submitHandler); submit.addEventListener('click', submitHandler); }
-    if (back) { back.removeEventListener('click', backHandler); back.addEventListener('click', backHandler); }
-  }
-
+  /* ---------------------------
+     Init servers page
+     --------------------------- */
   async function initServers(opts={}) {
     state.user = localStorage.getItem('username');
     if (!state.user) {
-      // show notice — pages themselves will show missing-user messages
       console.warn('initServers: username missing');
     }
+
+    // wire filters and controls (defensive)
     $('#search') && $('#search').addEventListener('input', renderServers);
     $('#tagFilter') && $('#tagFilter').addEventListener('input', renderServers);
     $('#sortBy') && $('#sortBy').addEventListener('change', renderServers);
     $('#filterPublic') && $('#filterPublic').addEventListener('change', renderServers);
     $('#filterPrivate') && $('#filterPrivate').addEventListener('change', renderServers);
     $('#filterHasSpace') && $('#filterHasSpace').addEventListener('change', renderServers);
-    $('#toggleCreate') && $('#toggleCreate').addEventListener('click', ()=>$('#createPanel').classList.toggle('hidden'));
-    $('#sv_cancel') && $('#sv_cancel').addEventListener('click', ()=>{ $('#createPanel').classList.add('hidden'); $('#createMsg').textContent=''; });
-    $('#sv_create') && $('#sv_create').addEventListener('click', createServer);
-    $('#backToJoin') && $('#backToJoin').addEventListener('click', ()=> location.href = './join.html' );
-    wirePwdModal();
-    try {
-      socket = io(BACKEND_URL, { autoConnect: true });
-      socket.on('servers-updated', list => { state.servers = list; renderServers(); });
-      socket.emit && socket.emit('request-servers');
-    } catch(e) { console.warn('Socket init failed', e); }
-    await fetchServers();
-    if (opts.showCreate) $('#createPanel').classList.remove('hidden');
-    const me = $('#meLine'); if (me && state.user) me.textContent = `You are: ${state.user}`;
-    // Robust create-panel toggle: toggles inline display and focuses first field
+
+    // create panel robust toggle (inline style control)
     (function wireCreateToggle() {
       const toggleBtn = document.getElementById('toggleCreate');
       const panel = document.getElementById('createPanel');
       const nameInput = document.getElementById('sv_name');
-    
-      // Ensure panel starts hidden (inline style) so JS control is consistent
-      if (panel) {
-        panel.style.display = panel.classList.contains('hidden') ? 'none' : (panel.style.display || 'none');
-        // Remove class toggling reliance (keep class for CSS fallback)
-        panel.classList.add('hidden');
-      }
-    
+
       if (!toggleBtn || !panel) return;
-    
+
+      // Ensure panel starts hidden via inline style
+      if (!panel.style.display) panel.style.display = panel.classList.contains('hidden') ? 'none' : 'none';
+      panel.classList.add('hidden');
+
       toggleBtn.addEventListener('click', (evt) => {
-        // Defensive: ignore synthetic events
         if (evt && evt.isTrusted === false) return;
-    
         const isHidden = panel.style.display === 'none' || panel.classList.contains('hidden');
         if (isHidden) {
           panel.style.display = 'block';
           panel.classList.remove('hidden');
-          // small visual nudge & focus
           setTimeout(() => { try { nameInput && nameInput.focus(); } catch(e){} }, 50);
         } else {
           panel.style.display = 'none';
@@ -263,8 +257,43 @@ const ClientApp = (function () {
       });
     })();
 
+    // wire create/cancel buttons
+    $('#sv_cancel') && $('#sv_cancel').addEventListener('click', () => {
+      const panel = document.getElementById('createPanel');
+      if (panel) { panel.style.display = 'none'; panel.classList.add('hidden'); }
+      $('#createMsg') && ($('#createMsg').textContent = '');
+    });
+    $('#sv_create') && $('#sv_create').addEventListener('click', createServer);
+
+    // back to join
+    $('#backToJoin') && $('#backToJoin').addEventListener('click', ()=> location.href = './join.html');
+
+    // wire pwd modal handlers
+    wirePwdModal();
+
+    // socket live updates (optional)
+    try {
+      socket = io(BACKEND_URL, { autoConnect: true });
+      socket.on('servers-updated', list => { state.servers = list; renderServers(); });
+      socket.emit && socket.emit('request-servers');
+    } catch(e) {
+      console.warn('Socket init failed', e);
+    }
+
+    // initial load
+    await fetchServers();
+
+    if (opts.showCreate) {
+      const panel = document.getElementById('createPanel');
+      if (panel) { panel.style.display = 'block'; panel.classList.remove('hidden'); }
+    }
+
+    const me = $('#meLine'); if (me && state.user) me.textContent = `You are: ${state.user}`;
   }
 
+  /* ---------------------------
+     Init chat page
+     --------------------------- */
   async function initChat(opts) {
     state.user = localStorage.getItem('username');
     if (!state.user) {
@@ -273,19 +302,24 @@ const ClientApp = (function () {
     }
     const serverId = opts.serverId;
     if (!serverId) { alert('No server'); location.href = './servers.html'; return; }
-    // clean modal state
+
+    // reset modal state
     state.pendingJoin = null;
     const modal = $('#pwdModal'); modal && modal.classList.add('hidden');
 
     socket = io(BACKEND_URL, { autoConnect: false });
     socket.connect();
-    socket.on('connect', ()=> socket.emit('join-room', { serverId, username: state.user }));
+
+    socket.on('connect', ()=> {
+      socket.emit('join-room', { serverId, username: state.user });
+    });
+
     socket.on('joined-ok', ()=> addSystem('Joined server'));
     socket.on('join-error', d => { alert('Error: ' + (d.error || 'Join failed')); location.href = './servers.html'; });
     socket.on('chat-message', m => addChatMessage(m));
     socket.on('system-message', m => addSystem(m.text || m));
 
-    $('#msgForm') && $('#msgForm').addEventListener('submit', e => {
+    $('#msgForm') && $('#msgForm').addEventListener('submit', (e) => {
       e.preventDefault();
       const txt = ($('#msgInput') && $('#msgInput').value.trim()) || '';
       if (!txt) return;
@@ -304,11 +338,19 @@ const ClientApp = (function () {
       if (res.ok) {
         const list = await res.json();
         const s = list.find(x => x.id === serverId);
-        if (s) { $('#roomTitle').textContent = s.name; $('#roomMeta').textContent = `Created by ${s.creator} • ${s.occupancy}/${s.max} occupants`; }
+        if (s) {
+          $('#roomTitle') && ($('#roomTitle').textContent = s.name);
+          $('#roomMeta') && ($('#roomMeta').textContent = `Created by ${s.creator} • ${s.occupancy}/${s.max} occupants`);
+        }
       }
-    } catch(e){}
+    } catch(e) {
+      console.warn('initChat metadata fetch failed', e);
+    }
   }
 
+  /* ---------------------------
+     Chat message helpers
+     --------------------------- */
   function addChatMessage(m) {
     const area = $('#messages'); if (!area) return;
     const d = createEl('div','msg');
@@ -317,10 +359,10 @@ const ClientApp = (function () {
   }
   function addSystem(text) {
     const area = $('#messages'); if (!area) return;
-    const d = createEl('div','msg'); d.innerHTML = `<div class="meta">[system]</div><div>${escapeHtml(text)}</div>`; area.appendChild(d); area.scrollTop = area.scrollHeight;
+    const d = createEl('div','msg');
+    d.innerHTML = `<div class="meta">[system]</div><div>${escapeHtml(text)}</div>`;
+    area.appendChild(d); area.scrollTop = area.scrollHeight;
   }
 
   return { initServers, initChat };
 })();
-
-
