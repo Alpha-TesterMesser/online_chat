@@ -7,6 +7,43 @@ const $ = (sel) => document.querySelector(sel);
 const createEl = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
 const escapeHtml = (s='') => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
+// THEME TOGGLER
+(function(){
+  const saved = localStorage.getItem('theme');
+  const systemPrefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+  const defaultTheme = saved || (systemPrefersLight ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-theme', defaultTheme);
+
+  window.toggleTheme = function() {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    updateToggleButton(next);
+  };
+
+  function updateToggleButton(theme) {
+    const b = document.getElementById('themeToggle');
+    if (!b) return;
+    if (theme === 'dark') {
+      b.textContent = '☀️ Light';
+      b.setAttribute('aria-pressed', 'true');
+    } else {
+      b.textContent = '🌙 Dark';
+      b.setAttribute('aria-pressed', 'false');
+    }
+  }
+
+  // Wire up button on DOM ready if present
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('themeToggle');
+    if (btn) {
+      btn.addEventListener('click', () => window.toggleTheme());
+      updateToggleButton(document.documentElement.getAttribute('data-theme'));
+    }
+  });
+})();
+
 const ClientApp = (function () {
   let state = { user: null, servers: [], pendingJoin: null };
 
@@ -235,3 +272,4 @@ const ClientApp = (function () {
 
   return { initServers, initChat };
 })();
+
