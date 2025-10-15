@@ -61,6 +61,10 @@
         <div id="pwdMsg" class="muted"></div>
       </div>
     </div>
+
+    <div id="missingUserNotice" class="muted" style="margin-top:12px; display:none;">
+      Username missing. Click Back to return to entry page.
+    </div>
   </main>
 
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -68,14 +72,22 @@
   <script>
     (async function init() {
       const user = localStorage.getItem('username');
-      if (!user) { alert('No username; go back.'); try { top.location = './index.html'; } catch(e) { location='./index.html'; } return; }
-      document.getElementById('meLine').textContent = `You are: ${user}`;
+      if (!user) {
+        document.getElementById('missingUserNotice').style.display = 'block';
+        document.getElementById('meLine').textContent = 'You are: (missing)';
+      } else {
+        document.getElementById('meLine').textContent = `You are: ${user}`;
+      }
 
       const params = new URLSearchParams(location.search);
       const create = params.get('create') === '1';
 
       await ClientApp.initServers({ showCreate: create });
     })();
+
+    document.getElementById('backToJoin').addEventListener('click', () => {
+      location.href = './join.html';
+    });
   </script>
 </body>
 </html>
