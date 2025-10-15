@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Choose Server</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="card">
+    <header>
+      <h1>Servers</h1>
+      <div id="meLine" class="muted"></div>
+    </header>
+
+    <section class="controls">
+      <input id="search" placeholder="Search by name or tag" />
+      <select id="sortBy">
+        <option value="created">Newest</option>
+        <option value="name">Name</option>
+        <option value="occupancy">Occupancy (avail)</option>
+      </select>
+      <button id="createToggle">Create Server</button>
+    </section>
+
+    <section id="list"></section>
+
+    <section id="createBox" class="hidden">
+      <h3>Create Server</h3>
+      <label>Server name <input id="sv_name" /></label>
+      <label>Tags (comma-separated) <input id="sv_tags" /></label>
+      <label>Max occupants <input id="sv_max" type="number" value="8" min="1" /></label>
+      <label>Password (leave blank = public) <input id="sv_pass" type="password" /></label>
+      <div class="row">
+        <button id="sv_create">Create</button>
+        <button id="sv_cancel">Cancel</button>
+      </div>
+      <div id="createMsg" class="muted"></div>
+    </section>
+
+    <!-- Password modal -->
+    <div id="pwdModal" class="modal hidden">
+      <div class="modal-content">
+        <h4>Enter server password</h4>
+        <input id="pwdInput" type="password" />
+        <div class="row">
+          <button id="pwdSubmit">Submit</button>
+          <button id="pwdBack">Back</button>
+        </div>
+        <div id="pwdMsg" class="muted"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="client.js"></script>
+  <script>
+    // Initialize page
+    (async function init() {
+      const user = localStorage.getItem('username');
+      if (!user) {
+        alert('Username missing. Go back and enter a username.');
+        window.location = 'index.html';
+        return;
+      }
+      document.getElementById('meLine').textContent = `You are: ${user}`;
+
+      await ClientApp.init({ page: 'servers' });
+    })();
+  </script>
+</body>
+</html>

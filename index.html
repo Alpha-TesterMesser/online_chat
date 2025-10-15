@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Chat — Enter username</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="card">
+    <h1>Welcome</h1>
+    <p>Enter a username to start (it will be kept while this tab is open).</p>
+
+    <label>
+      Username
+      <input id="usernameInput" type="text" maxlength="50" placeholder="e.g. Alice" />
+    </label>
+
+    <div class="row">
+      <button id="enterBtn">Enter Chat</button>
+    </div>
+
+    <small class="muted">This opens the chat in a new blank window.</small>
+  </main>
+
+  <script>
+    // When tab/window closes, remove username (session behavior)
+    window.addEventListener('beforeunload', () => {
+      try { localStorage.removeItem('username'); } catch (e) {}
+    });
+
+    // If already set (same tab previously), go straight to servers
+    if (localStorage.getItem('username')) {
+      // open in new about:blank
+      const w = window.open('about:blank');
+      w.location = `${location.origin}/servers.html`;
+    }
+
+    const enterBtn = document.getElementById('enterBtn');
+    enterBtn.addEventListener('click', () => {
+      const v = document.getElementById('usernameInput').value.trim();
+      if (!v) return alert('Please enter a username');
+      localStorage.setItem('username', v);
+      // open new about:blank then load UI there
+      const w = window.open('about:blank');
+      w.location = `${location.origin}/servers.html`;
+      // disable input here to prevent changes in this tab
+      enterBtn.disabled = true;
+      document.getElementById('usernameInput').disabled = true;
+    });
+
+    // allow Enter key
+    document.getElementById('usernameInput')
+      .addEventListener('keydown', (e) => { if (e.key === 'Enter') enterBtn.click(); });
+  </script>
+</body>
+</html>

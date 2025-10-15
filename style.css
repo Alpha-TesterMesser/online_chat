@@ -1,0 +1,21 @@
+/* Minimal styling */
+:root { --bg:#f4f6f8; --card:#fff; --muted:#6b7280; --accent:#0b5fff; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:Inter,system-ui,Arial; background:var(--bg); display:flex; align-items:center; justify-content:center; min-height:100vh; padding:24px; }
+.card { width:100%; max-width:900px; background:var(--card); padding:18px; border-radius:12px; box-shadow:0 8px 30px rgba(2,6,23,0.08); }
+.row { display:flex; gap:8px; align-items:center; margin-top:8px; }
+input, select, button, textarea { padding:8px 10px; border-radius:8px; border:1px solid #e6e7ea; font-size:15px; }
+button { background:var(--accent); color:#fff; border:none; cursor:pointer; }
+button[disabled] { opacity:0.6; cursor:not-allowed; }
+.muted { color:var(--muted); font-size:13px; margin-top:6px; }
+.controls { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
+#list { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+.serverCard { border:1px solid #eef2ff; padding:10px; border-radius:8px; background:#fff; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.serverInfo { flex:1; }
+.serverActions { display:flex; gap:8px; align-items:center; }
+.hidden { display:none; }
+.modal { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.4); }
+.modal-content { background:#fff; padding:18px; border-radius:10px; width:90%; max-width:420px; }
+.chatWindow { height:380px; overflow:auto; border:1px solid #eef2ff; background:#fafbff; padding:10px; border-radius:8px; margin-bottom:8px; }
+.msg { margin-bottom:8px; padding:8px; border-radius:8px; background:#fff; }
+.meta { font-size:12px; color:var(--muted); margin-bottom:6px; }

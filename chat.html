@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Chat Room</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="card">
+    <header>
+      <h1 id="roomTitle">Chat</h1>
+      <div id="roomMeta" class="muted"></div>
+    </header>
+
+    <section id="messages" class="chatWindow"></section>
+
+    <form id="msgForm" class="row" autocomplete="off">
+      <input id="msgInput" placeholder="Type a message..." />
+      <button type="submit">Send</button>
+      <button type="button" id="leaveBtn">Leave</button>
+    </form>
+  </main>
+
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="client.js"></script>
+  <script>
+    (async function initChat() {
+      const user = localStorage.getItem('username');
+      if (!user) { alert('Username missing'); window.location='index.html'; return; }
+
+      // read server id from URL
+      const params = new URLSearchParams(location.search);
+      const serverId = params.get('server');
+      if (!serverId) { alert('Server missing'); window.location='servers.html'; return; }
+
+      await ClientApp.init({ page: 'chat', serverId });
+    })();
+  </script>
+</body>
+</html>
