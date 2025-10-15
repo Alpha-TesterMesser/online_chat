@@ -14,7 +14,19 @@
     .muted{color:#6b7280;font-size:13px;margin-top:8px}
     .hint{margin-top:12px;color:#444;font-size:13px}
   </style>
+  <header style="display:flex; justify-content:space-between; align-items:center;">
+  <div>
+    <h1>Main</h1>
+    <div id="meLine" class="muted"></div>
+  </div>
+  <div style="display:flex; gap:8px; align-items:center;">
+    <button id="themeToggle" class="secondary" aria-pressed="false" title="Toggle theme">
+      🌙 Dark
+    </button>
+  </div>
+</header>
 </head>
+
 <body>
   <main class="card" role="main" aria-live="polite">
     <h1>Welcome</h1>
@@ -136,3 +148,5 @@
   </script>
 </body>
 </html>
+
+
