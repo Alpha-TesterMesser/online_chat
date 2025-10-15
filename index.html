@@ -18,7 +18,7 @@
 <body>
   <main class="card" role="main" aria-live="polite">
     <h1>Welcome</h1>
-    <p class="muted">Enter username — a new about:blank tab will open and host the app (the address bar will show <code>about:blank</code>).</p>
+    <p class="muted">Enter a username — a new about:blank tab will open and host the app inside an iframe (the address bar will show <code>about:blank</code>).</p>
 
     <label>
       Username
@@ -32,7 +32,8 @@
     <div id="closeHint" class="hint" style="display:none;">
       If the original tab is still open, you can safely close it now.
     </div>
-    <small class="muted">If popups are blocked this will fall back to replacing this tab with the app.</small>
+
+    <small class="muted">If popups are blocked we fall back to opening the app in this tab.</small>
   </main>
 
   <script>
@@ -40,7 +41,7 @@
 
     function escapeHtml(s=''){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-    function buildAboutBlankHtmlWithIframe(username, absoluteTarget) {
+    function buildAboutBlankWithIframe(username, absoluteTarget) {
       const safe = escapeHtml(username || '');
       return `<!doctype html>
 <html>
@@ -54,10 +55,8 @@
     </style>
   </head>
   <body>
-    <!-- top-level remains about:blank; app runs inside iframe -->
     <iframe id="appFrame" src="${absoluteTarget}" allow="clipboard-write"></iframe>
     <script>
-      // focus the iframe window when it loads
       (function(){
         const f = document.getElementById('appFrame');
         f && f.addEventListener('load', () => {
@@ -73,15 +72,13 @@
       return new URL(TARGET_RELATIVE, location.href).href;
     }
 
-    // Open about:blank in a NEW tab and write iframe into it
     function openAboutBlankWithIframe(username) {
       const abs = computeAbsoluteTarget();
       let w = null;
       try { w = window.open('about:blank', '_blank'); } catch(e) { w = null; }
       if (!w) return false;
-
       try {
-        const html = buildAboutBlankHtmlWithIframe(username, abs);
+        const html = buildAboutBlankWithIframe(username, abs);
         w.document.open();
         w.document.write(html);
         w.document.close();
@@ -93,7 +90,6 @@
       }
     }
 
-    // Fallback: replace current tab with an inline placeholder that immediately loads target
     function fallbackReplaceCurrent(username) {
       const abs = computeAbsoluteTarget();
       const safe = escapeHtml(username || '');
@@ -113,37 +109,21 @@
     }
 
     function tryToCloseOriginalTab() {
-      try {
-        // Best-effort; many browsers block this unless the tab was opened by script
-        window.close();
-      } catch(e) {}
-      // If it didn't close, reveal the hint to user
+      try { window.close(); } catch(e){}
       setTimeout(() => {
-        const remain = !window.closed;
-        if (remain) {
-          document.getElementById('closeHint').style.display = 'block';
-        }
+        if (!window.closed) document.getElementById('closeHint').style.display = 'block';
       }, 300);
     }
 
     document.getElementById('enterBtn').addEventListener('click', () => {
       const name = document.getElementById('usernameInput').value.trim();
       if (!name) return alert('Please enter a username');
-
       try { localStorage.setItem('username', name); } catch(e){}
-
       const ok = openAboutBlankWithIframe(name);
-      if (!ok) {
-        // popup blocked; fallback to replacing current tab
-        fallbackReplaceCurrent(name);
-        return;
-      }
-
-      // optionally try to close original (may be blocked)
+      if (!ok) { fallbackReplaceCurrent(name); return; }
       tryToCloseOriginalTab();
     });
 
-    // If username already present in this tab, attempt to open about:blank automatically.
     (function autoOpenIfSet() {
       try {
         const existing = localStorage.getItem('username');
@@ -156,5 +136,3 @@
   </script>
 </body>
 </html>
-
-
