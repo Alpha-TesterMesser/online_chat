@@ -6,41 +6,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="stylesheet" href="./style.css" />
 </head>
-  <!-- Hidden trigger area -->
-<div id="ownerTrigger" style="position:fixed; bottom:10px; right:10px; width:20px; height:20px; opacity:0; cursor:pointer;"></div>
-
-<!-- Owner password modal -->
-<div id="ownerPwdModal" class="modal hidden">
-  <div class="modal-content">
-    <h4>Owner Access</h4>
-    <input id="ownerPwdInput" type="password" placeholder="Enter owner password">
-    <div class="row" style="margin-top:8px;">
-      <button id="ownerPwdSubmit">Submit</button>
-      <button id="ownerPwdCancel" class="secondary">Cancel</button>
-    </div>
-    <div id="ownerPwdMsg" class="muted"></div>
-  </div>
-</div>
-
-<!-- Owner control panel -->
-<div id="ownerPanel" class="modal hidden">
-  <div class="modal-content">
-    <h4>Owner Panel</h4>
-    <label>
-      <input type="checkbox" id="ownerTagToggle">
-      Show "Owner" tag next to my name
-    </label>
-    <div class="row" style="margin-top:8px;">
-      <button id="ownerClose" class="secondary">Close</button>
-    </div>
-  </div>
-</div>
-<body>
-  <main class="card">
-    <header>
-      <h1 id="roomTitle">Chat Room</h1>
-      <div id="roomMeta" class="muted"></div>
-    </header>
 
     <section id="messages" class="chatWindow"></section>
 
@@ -67,4 +32,5 @@
   </script>
 </body>
 </html>
+
 
