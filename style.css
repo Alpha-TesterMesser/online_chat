@@ -19,3 +19,4 @@ button.secondary { background:#e6e7ea; color:#111; }
 .msg { margin-bottom:8px; padding:8px; border-radius:8px; background:#fff; }
 .meta { font-size:12px; color:var(--muted); margin-bottom:6px; }
 label { display:block; margin-top:8px; }
+.modal.hidden { display: none; }
