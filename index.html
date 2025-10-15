@@ -5,64 +5,20 @@
   <title>Chat — Enter username</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    :root {
-      --bg: #f4f6f8;
-      --card: #fff;
-      --muted: #6b7280;
-      --accent: #0b5fff;
-    }
-    body {
-      font-family: system-ui, Arial, sans-serif;
-      margin: 0;
-      display: flex;
-      min-height: 100vh;
-      align-items: center;
-      justify-content: center;
-      background: var(--bg);
-    }
-    .card {
-      background: var(--card);
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 8px 30px rgba(2, 6, 23, 0.06);
-      max-width: 540px;
-      width: 100%;
-    }
-    label { display: block; margin-top: 8px; }
-    input {
-      width: 100%;
-      padding: 8px;
-      border-radius: 8px;
-      border: 1px solid #e6e7ea;
-    }
-    .row {
-      margin-top: 12px;
-      display: flex;
-      gap: 8px;
-    }
-    button {
-      background: var(--accent);
-      color: #fff;
-      border: 0;
-      padding: 9px 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-    button:hover {
-      filter: brightness(1.05);
-    }
-    .muted {
-      color: var(--muted);
-      font-size: 13px;
-      margin-top: 8px;
-    }
+    /* minimal styles for the entry page */
+    body{font-family:system-ui,Arial;margin:0;display:flex;min-height:100vh;align-items:center;justify-content:center;background:#f4f6f8}
+    .card{background:#fff;padding:20px;border-radius:10px;box-shadow:0 8px 30px rgba(2,6,23,0.06);max-width:540px;width:100%}
+    label{display:block;margin-top:8px}
+    input{width:100%;padding:8px;border-radius:8px;border:1px solid #e6e7ea}
+    .row{margin-top:12px;display:flex;gap:8px}
+    button{background:#0b5fff;color:#fff;border:0;padding:9px 12px;border-radius:8px;cursor:pointer}
+    .muted{color:#6b7280;font-size:13px;margin-top:8px}
   </style>
 </head>
 <body>
   <main class="card" role="main" aria-live="polite">
     <h1>Welcome</h1>
-    <p class="muted">Enter a username. The app will take over this tab and load the chat UI.</p>
+    <p class="muted">Enter username — a new about:blank tab will open and then load the chat app.</p>
 
     <label>
       Username
@@ -73,85 +29,144 @@
       <button id="enterBtn">Enter</button>
     </div>
 
-    <small class="muted">
-      Username is stored only while this tab is open. Closing the tab will clear it automatically.
-    </small>
+    <small class="muted">If the browser blocks popups we’ll fall back to opening the app in this tab.</small>
   </main>
 
   <script>
-    const TARGET_RELATIVE = './join.html'; // change if your join page is named differently
+    // CHANGE this if your join page has a different name/path
+    const TARGET_RELATIVE = './join.html';
 
-    function escapeHtml(str) {
-      return String(str).replace(/[<&>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+    // escape for HTML injection safety
+    function escapeHtml(s = '') {
+      return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     }
 
-    // Replace current document with a dark placeholder and schedule navigation
-    function writeBlankPlaceholderThenNavigate(username) {
-      const safeName = escapeHtml(username || '');
-      const target = TARGET_RELATIVE.replace(/'/g, "\\'");
-      const html = `<!doctype html>
+    // Build placeholder HTML that resembles about:blank and will auto-navigate
+    function buildPlaceholderHtml(username, absoluteTarget) {
+      const safe = escapeHtml(username || '');
+      // short delay (ms) before navigation so placeholder paints
+      const DELAY_MS = 150;
+      return `<!doctype html>
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Preparing chat…</title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>about:blank</title>
     <style>
-      html,body{height:100%;margin:0;font-family:system-ui,Arial,Helvetica,sans-serif;background:#0b0f1a;color:#fff}
-      .box{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%}
-      .card{background:rgba(255,255,255,0.04);padding:22px;border-radius:12px;text-align:center;max-width:520px}
-      .muted{opacity:0.9;margin-top:8px;font-size:14px;color:#cbd5e1}
+      html,body{height:100%;margin:0;background:#ffffff;color:#000;font-family:system-ui,Arial}
+      .box{display:flex;align-items:center;justify-content:center;height:100%}
+      .card{background:rgba(0,0,0,0.02);padding:20px;border-radius:10px;text-align:center}
+      .muted{color:#444;font-size:13px;margin-top:8px}
     </style>
   </head>
   <body>
     <div class="box">
       <div class="card">
-        <div style="font-size:18px">Preparing chat…</div>
-        <div class="muted" id="who">${safeName ? 'User: ' + safeName : ''}</div>
+        <div style="font-size:16px">Preparing chat…</div>
+        <div class="muted">${safe ? 'User: ' + safe : ''}</div>
       </div>
     </div>
 
     <script>
       setTimeout(function(){
         try {
-          location.href = '${target}';
+          location.href = '${absoluteTarget}';
         } catch(e) {
-          window.location = '${target}';
+          try { window.location = '${absoluteTarget}'; } catch (ee) {}
         }
-      }, 80);
+      }, ${DELAY_MS});
     <\/script>
   </body>
 </html>`;
+    }
 
+    // Helper: compute absolute target URL from relative path so the new about:blank can navigate correctly
+    function computeAbsoluteTarget() {
+      return new URL(TARGET_RELATIVE, location.href).href;
+    }
+
+    // Attempt to open a real about:blank in a NEW tab, write placeholder into it, then navigate.
+    // Returns true if we opened a new window (even if navigation will happen there).
+    function openAboutBlankAndNavigate(username) {
+      const absTarget = computeAbsoluteTarget();
+      let w = null;
+      try {
+        // MUST be called directly from user click to avoid popup blockers
+        w = window.open('about:blank', '_blank');
+      } catch (e) {
+        w = null;
+      }
+
+      if (!w) {
+        // popup blocked or failed
+        return false;
+      }
+
+      // We own the about:blank window because we opened it; write placeholder and nav script into it
+      try {
+        const html = buildPlaceholderHtml(username, absTarget);
+        w.document.open();
+        w.document.write(html);
+        w.document.close();
+
+        // Try to focus the new tab (best-effort)
+        try { w.focus(); } catch (e) {}
+      } catch (err) {
+        // If writing fails, close the new window and fallback
+        try { w.close(); } catch(e) {}
+        return false;
+      }
+      return true;
+    }
+
+    // Fallback: replace current tab with placeholder then navigate (single-tab)
+    function replaceCurrentWithPlaceholderThenNavigate(username) {
+      const absTarget = computeAbsoluteTarget();
+      const html = buildPlaceholderHtml(username, absTarget);
       document.open();
       document.write(html);
       document.close();
+      // after document.write, the new document's inline script will run and do the navigation
     }
 
-    // Auto-navigate if username is already set in this tab
-    (function autoNavigateIfSet(){
-      try {
-        const existing = sessionStorage.getItem('username');
-        if (existing) {
-          writeBlankPlaceholderThenNavigate(existing);
-        }
-      } catch(e) {}
-    })();
-
-    // Handle Enter button click
+    // Main handler — called on Enter button click
     document.getElementById('enterBtn').addEventListener('click', () => {
-      const v = document.getElementById('usernameInput').value.trim();
-      if (!v) {
-        alert('Please enter a username');
+      const name = document.getElementById('usernameInput').value.trim();
+      if (!name) return alert('Please enter a username');
+
+      // Save username to localStorage so the new tab can read it
+      try { localStorage.setItem('username', name); } catch(e) {}
+
+      // Try opening real about:blank in a new tab (user gesture required)
+      const opened = openAboutBlankAndNavigate(name);
+
+      if (!opened) {
+        // Popup blocked — fallback to same-tab replacement + navigate
+        replaceCurrentWithPlaceholderThenNavigate(name);
         return;
       }
-      try { sessionStorage.setItem('username', v); } catch(e){}
-      writeBlankPlaceholderThenNavigate(v);
+
+      // Optional: attempt to close this original tab (will usually be blocked by browsers)
+      // Comment the next line if you want to stop trying to close the original tab
+       try { window.close(); } catch(e) {}
     });
 
-    // Allow pressing Enter in the input field
-    document.getElementById('usernameInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') document.getElementById('enterBtn').click();
-    });
+    // If username already stored in this tab (rare), attempt to open about:blank automatically.
+    // Note: automatic open without a user gesture may be blocked — so we only do it if the tab was already used to set username
+    (function tryAutoOpenIfAlreadySet() {
+      try {
+        const existing = localStorage.getItem('username');
+        if (!existing) return;
+        // Attempt to open a new about:blank and write into it. Browsers may block non-user opens.
+        const ok = openAboutBlankAndNavigate(existing);
+        if (!ok) {
+          // If blocked, fallback to same-tab replacement
+          replaceCurrentWithPlaceholderThenNavigate(existing);
+        } else {
+          // Optionally keep original tab; do not close automatically.
+        }
+      } catch (e) {}
+    })();
   </script>
 </body>
 </html>
