@@ -4,12 +4,65 @@
   <meta charset="utf-8" />
   <title>Chat — Enter username</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="stylesheet" href="./style.css" />
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --card: #fff;
+      --muted: #6b7280;
+      --accent: #0b5fff;
+    }
+    body {
+      font-family: system-ui, Arial, sans-serif;
+      margin: 0;
+      display: flex;
+      min-height: 100vh;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+    }
+    .card {
+      background: var(--card);
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 8px 30px rgba(2, 6, 23, 0.06);
+      max-width: 540px;
+      width: 100%;
+    }
+    label { display: block; margin-top: 8px; }
+    input {
+      width: 100%;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #e6e7ea;
+    }
+    .row {
+      margin-top: 12px;
+      display: flex;
+      gap: 8px;
+    }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: 0;
+      padding: 9px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button:hover {
+      filter: brightness(1.05);
+    }
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 8px;
+    }
+  </style>
 </head>
 <body>
-  <main class="card" role="main">
+  <main class="card" role="main" aria-live="polite">
     <h1>Welcome</h1>
-    <p class="muted">Enter a username to start. The chat UI will open in a new tab.</p>
+    <p class="muted">Enter a username. The app will take over this tab and load the chat UI.</p>
 
     <label>
       Username
@@ -20,45 +73,85 @@
       <button id="enterBtn">Enter</button>
     </div>
 
-    <small class="muted">The username is kept in localStorage for this browser tab and removed when the tab closes.</small>
+    <small class="muted">
+      Username is stored only while this tab is open. Closing the tab will clear it automatically.
+    </small>
   </main>
 
   <script>
-    // Clear username on unload (session behavior)
-    window.addEventListener('beforeunload', () => {
-      try { localStorage.removeItem('username'); } catch (e) {}
-    });
+    const TARGET_RELATIVE = './join.html'; // change if your join page is named differently
 
-    // If username already set, open join page in a new tab/window
-    (function autoOpenIfSet(){
-      try {
-        if (localStorage.getItem('username')) {
-          const newWin = window.open('./join.html', '_blank');
-          try { newWin.focus(); } catch(e) {}
+    function escapeHtml(str) {
+      return String(str).replace(/[<&>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+    }
+
+    // Replace current document with a dark placeholder and schedule navigation
+    function writeBlankPlaceholderThenNavigate(username) {
+      const safeName = escapeHtml(username || '');
+      const target = TARGET_RELATIVE.replace(/'/g, "\\'");
+      const html = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Preparing chat…</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>
+      html,body{height:100%;margin:0;font-family:system-ui,Arial,Helvetica,sans-serif;background:#0b0f1a;color:#fff}
+      .box{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%}
+      .card{background:rgba(255,255,255,0.04);padding:22px;border-radius:12px;text-align:center;max-width:520px}
+      .muted{opacity:0.9;margin-top:8px;font-size:14px;color:#cbd5e1}
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <div class="card">
+        <div style="font-size:18px">Preparing chat…</div>
+        <div class="muted" id="who">${safeName ? 'User: ' + safeName : ''}</div>
+      </div>
+    </div>
+
+    <script>
+      setTimeout(function(){
+        try {
+          location.href = '${target}';
+        } catch(e) {
+          window.location = '${target}';
         }
-      } catch(e){}
+      }, 80);
+    <\/script>
+  </body>
+</html>`;
+
+      document.open();
+      document.write(html);
+      document.close();
+    }
+
+    // Auto-navigate if username is already set in this tab
+    (function autoNavigateIfSet(){
+      try {
+        const existing = sessionStorage.getItem('username');
+        if (existing) {
+          writeBlankPlaceholderThenNavigate(existing);
+        }
+      } catch(e) {}
     })();
 
-    const enterBtn = document.getElementById('enterBtn');
-    enterBtn.addEventListener('click', () => {
+    // Handle Enter button click
+    document.getElementById('enterBtn').addEventListener('click', () => {
       const v = document.getElementById('usernameInput').value.trim();
-      if (!v) return alert('Please enter a username');
-      localStorage.setItem('username', v);
-
-      // Open about:blank then navigate to relative join page
-      const w = window.open('about:blank', '_blank');
-      try { w.location = './join.html'; } catch (err) {
-        window.open('./join.html', '_blank');
+      if (!v) {
+        alert('Please enter a username');
+        return;
       }
-
-      // disable input here to prevent changes in this tab
-      enterBtn.disabled = true;
-      document.getElementById('usernameInput').disabled = true;
+      try { sessionStorage.setItem('username', v); } catch(e){}
+      writeBlankPlaceholderThenNavigate(v);
     });
 
-    // allow Enter key
-    document.getElementById('usernameInput')
-      .addEventListener('keydown', (e) => { if (e.key === 'Enter') enterBtn.click(); });
+    // Allow pressing Enter in the input field
+    document.getElementById('usernameInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('enterBtn').click();
+    });
   </script>
 </body>
 </html>
