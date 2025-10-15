@@ -104,46 +104,46 @@ const ClientApp = (function () {
   }
 
   // Join click handler — only prompt for password when button clicked (safe version)
-function onJoinClick(srv, evt) {
-  // Optional guard: ensure this came from a real user gesture
-  if (evt && evt.isTrusted === false) {
-    console.warn('Ignored synthetic/non-trusted event for join.');
-    return;
+  function onJoinClick(srv, evt) {
+    // Optional guard: ensure this came from a real user gesture
+    if (evt && evt.isTrusted === false) {
+      console.warn('Ignored synthetic/non-trusted event for join.');
+      return;
+    }
+  
+    // clear previous pending join
+    state.pendingJoin = null;
+  
+    // If the server is public, attempt immediate join
+    if (!srv.hasPassword) {
+      attemptJoin(srv.id, '');
+      return;
+    }
+  
+    // Otherwise prepare modal for password input
+    state.pendingJoin = srv;
+  
+    const modal = document.getElementById('pwdModal');
+    const pwdInput = document.getElementById('pwdInput');
+    const pwdMsg = document.getElementById('pwdMsg');
+  
+    if (!modal) {
+      console.error('Password modal not found in DOM.');
+      return;
+    }
+  
+    // reset modal UI
+    if (pwdInput) pwdInput.value = '';
+    if (pwdMsg) pwdMsg.textContent = '';
+  
+    // show modal
+    modal.classList.remove('hidden');
+  
+    // focus input on next tick so browsers will focus properly
+    setTimeout(() => {
+      try { pwdInput && pwdInput.focus(); } catch(e){}
+    }, 0);
   }
-
-  // clear previous pending join
-  state.pendingJoin = null;
-
-  // If the server is public, attempt immediate join
-  if (!srv.hasPassword) {
-    attemptJoin(srv.id, '');
-    return;
-  }
-
-  // Otherwise prepare modal for password input
-  state.pendingJoin = srv;
-
-  const modal = document.getElementById('pwdModal');
-  const pwdInput = document.getElementById('pwdInput');
-  const pwdMsg = document.getElementById('pwdMsg');
-
-  if (!modal) {
-    console.error('Password modal not found in DOM.');
-    return;
-  }
-
-  // reset modal UI
-  if (pwdInput) pwdInput.value = '';
-  if (pwdMsg) pwdMsg.textContent = '';
-
-  // show modal
-  modal.classList.remove('hidden');
-
-  // focus input on next tick so browsers will focus properly
-  setTimeout(() => {
-    try { pwdInput && pwdInput.focus(); } catch(e){}
-  }, 0);
-}
 
   // Create server
   async function createServer() {
@@ -340,4 +340,5 @@ function onJoinClick(srv, evt) {
     initChat
   };
 })();
+
 
