@@ -27,11 +27,11 @@
   <script>
     (async function initChat() {
       const user = localStorage.getItem('username');
-      if (!user) { alert('Username missing'); window.location='./index.html'; return; }
+      if (!user) { alert('Username missing'); try { top.location = './index.html'; } catch(e){ location='./index.html'; } return; }
 
       const params = new URLSearchParams(location.search);
       const serverId = params.get('server');
-      if (!serverId) { alert('Server missing'); window.location='./servers.html'; return; }
+      if (!serverId) { alert('Server missing'); location='./servers.html'; return; }
 
       await ClientApp.initChat({ serverId });
     })();
