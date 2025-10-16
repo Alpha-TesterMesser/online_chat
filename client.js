@@ -242,8 +242,19 @@ const ClientApp = (function () {
     $('#filterPublic') && $('#filterPublic').addEventListener('change', renderServers);
     $('#filterPrivate') && $('#filterPrivate').addEventListener('change', renderServers);
     $('#filterHasSpace') && $('#filterHasSpace').addEventListener('change', renderServers);
-    $('#toggleCreate') && $('#toggleCreate').addEventListener('click', ()=>$('#createPanel').classList.toggle('hidden'));
-    $('#sv_cancel') && $('#sv_cancel').addEventListener('click', ()=>{ $('#createPanel').classList.add('hidden'); $('#createMsg').textContent=''; });
+
+    // ✅ Make sure the New Server button always works
+    const toggleBtn = $('#toggleCreate');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        $('#createPanel').classList.toggle('hidden');
+      });
+    }
+
+    $('#sv_cancel') && $('#sv_cancel').addEventListener('click', ()=>{ 
+      $('#createPanel').classList.add('hidden'); 
+      $('#createMsg').textContent='';
+    });
     $('#sv_create') && $('#sv_create').addEventListener('click', createServer);
     $('#backToJoin') && $('#backToJoin').addEventListener('click', ()=> location.href = './join.html' );
     wirePwdModal();
