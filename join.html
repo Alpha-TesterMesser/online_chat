@@ -17,33 +17,40 @@
     </div>
 
     <div style="margin-top:12px;">
-      <button id="btnBack" class="secondary">Back to username</button>
+      <button id="btnBack" class="secondary">Return to Entry Page</button>
+    </div>
+
+    <div id="missingUserNotice" class="muted" style="margin-top:12px; display:none;">
+      Username not found in this session. Click "Return to Entry Page" to set a username.
     </div>
   </main>
 
   <script>
-    // Ensure username exists
+    function showMissingUserUI() {
+      document.getElementById('welcomeLine').textContent = 'Username missing';
+      document.getElementById('missingUserNotice').style.display = 'block';
+    }
+
     const user = localStorage.getItem('username');
     if (!user) {
-      alert('No username set. Return to the main page.');
-      window.location = './index.html';
+      showMissingUserUI();
     } else {
       document.getElementById('welcomeLine').textContent = `You are: ${user}`;
     }
 
     document.getElementById('btnJoin').addEventListener('click', () => {
-      // Open server list page
-      window.location = './servers.html';
+      if (!localStorage.getItem('username')) { showMissingUserUI(); return; }
+      location.href = './servers.html';
     });
 
     document.getElementById('btnCreate').addEventListener('click', () => {
-      // open servers page and auto-show create form using query param
-      window.location = './servers.html?create=1';
+      if (!localStorage.getItem('username')) { showMissingUserUI(); return; }
+      location.href = './servers.html?create=1';
     });
 
+    // Return to original entry page - explicit user action
     document.getElementById('btnBack').addEventListener('click', () => {
-      // go back to username entry (index)
-      window.location = './index.html';
+      try { window.top.location = './index.html'; } catch(e) { location.href = './index.html'; }
     });
   </script>
 </body>
