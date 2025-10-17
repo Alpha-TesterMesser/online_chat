@@ -1,4 +1,4 @@
-// client.js (iframe-friendly)
+// client.js (iframe-friendly) — robust toggle version
 // Replace with your backend URL:
 const BACKEND_URL = 'https://chat-backend-1-4k6l.onrender.com';
 
@@ -52,6 +52,45 @@ const Log = {
     }
   });
 })();
+
+// ---------- Delegated create-panel toggle (robust) ----------
+// This makes the New Server toggle work even if the button is added or replaced later.
+document.addEventListener('click', (e) => {
+  try {
+    const clicked = e.target;
+    // find a matching element with id toggleCreate (works if inner element clicked)
+    const toggleEl = clicked && (clicked.id === 'toggleCreate' ? clicked : (clicked.closest ? clicked.closest('#toggleCreate') : null));
+    if (!toggleEl) return; // not our button
+    e.preventDefault && e.preventDefault();
+
+    const panel = document.getElementById('createPanel');
+    if (!panel) {
+      Log.warn('Toggle clicked but createPanel not found');
+      return;
+    }
+
+    // Ensure panel has a deterministic inline style initially
+    if (!panel.style.display) {
+      panel.style.display = panel.classList.contains('hidden') ? 'none' : 'none';
+      panel.classList.add('hidden');
+    }
+
+    const isHidden = panel.style.display === 'none' || panel.classList.contains('hidden');
+    if (isHidden) {
+      panel.style.display = 'block';
+      panel.classList.remove('hidden');
+      Log.info('Create panel opened (delegated)');
+      const nameInput = document.getElementById('sv_name');
+      setTimeout(()=>{ try{ nameInput && nameInput.focus(); }catch(e){} }, 40);
+    } else {
+      panel.style.display = 'none';
+      panel.classList.add('hidden');
+      Log.info('Create panel closed (delegated)');
+    }
+  } catch (err) {
+    Log.error('Error in delegated toggle handler', err);
+  }
+});
 
 // ---------- CLIENT APP ----------
 const ClientApp = (function () {
@@ -184,11 +223,11 @@ const ClientApp = (function () {
 
   // Create server
   async function createServer() {
-    const name = $('#sv_name').value.trim();
-    const tags = $('#sv_tags').value.trim();
-    const max = Math.max(1, Number($('#sv_max').value) || 8);
-    const password = $('#sv_pass').value || '';
-    if (!name) { $('#createMsg').textContent = 'Name required'; return; }
+    const name = ($('#sv_name') && $('#sv_name').value.trim()) || '';
+    const tags = ($('#sv_tags') && $('#sv_tags').value.trim()) || '';
+    const max = Math.max(1, Number($('#sv_max') && $('#sv_max').value) || 8);
+    const password = ($('#sv_pass') && $('#sv_pass').value) || '';
+    if (!name) { $('#createMsg') && ($('#createMsg').textContent = 'Name required'); return; }
     Log.group('Create Server');
     try {
       Log.info(`Creating server "${name}"`);
@@ -200,16 +239,18 @@ const ClientApp = (function () {
       const body = await res.json();
       if (!res.ok) {
         Log.error(`Create failed: ${body.error || res.statusText}`);
-        $('#createMsg').textContent = body.error || 'Create failed';
+        $('#createMsg') && ($('#createMsg').textContent = body.error || 'Create failed');
         return;
       }
       Log.success(`Server "${name}" created`);
-      $('#createMsg').textContent = 'Server created';
-      $('#createPanel').classList.add('hidden');
+      $('#createMsg') && ($('#createMsg').textContent = 'Server created');
+      // hide panel reliably
+      const panel = document.getElementById('createPanel');
+      if (panel) { panel.style.display = 'none'; panel.classList.add('hidden'); }
       await fetchServers();
     } catch(e) {
       Log.error('Network error creating server', e);
-      $('#createMsg').textContent = 'Network error';
+      $('#createMsg') && ($('#createMsg').textContent = 'Network error');
     } finally {
       Log.groupEnd();
     }
@@ -243,17 +284,27 @@ const ClientApp = (function () {
     $('#filterPrivate') && $('#filterPrivate').addEventListener('change', renderServers);
     $('#filterHasSpace') && $('#filterHasSpace').addEventListener('change', renderServers);
 
-    // ✅ Make sure the New Server button always works
+    // Keep direct binding too (delegation will handle cases where button is replaced)
     const toggleBtn = $('#toggleCreate');
     if (toggleBtn) {
+      try {
+        toggleBtn.type = 'button';
+      } catch(e){}
       toggleBtn.addEventListener('click', () => {
-        $('#createPanel').classList.toggle('hidden');
+        const panel = $('#createPanel');
+        if (!panel) return;
+        panel.classList.toggle('hidden');
+        // maintain inline display for consistency with delegated behavior
+        panel.style.display = panel.classList.contains('hidden') ? 'none' : 'block';
+        const nameInput = document.getElementById('sv_name');
+        setTimeout(()=>{ try{ nameInput && nameInput.focus(); }catch(e){} }, 40);
+        Log.info('Create panel toggled (direct binding)');
       });
     }
 
     $('#sv_cancel') && $('#sv_cancel').addEventListener('click', ()=>{ 
-      $('#createPanel').classList.add('hidden'); 
-      $('#createMsg').textContent='';
+      const panel = document.getElementById('createPanel'); if (panel) { panel.style.display = 'none'; panel.classList.add('hidden'); }
+      $('#createMsg') && ($('#createMsg').textContent=''); 
     });
     $('#sv_create') && $('#sv_create').addEventListener('click', createServer);
     $('#backToJoin') && $('#backToJoin').addEventListener('click', ()=> location.href = './join.html' );
@@ -275,8 +326,15 @@ const ClientApp = (function () {
       Log.error('Socket init failed', e);
     }
 
+    // Ensure createPanel starts hidden inline (so display toggles consistently)
+    const panelInit = document.getElementById('createPanel');
+    if (panelInit) {
+      panelInit.style.display = panelInit.classList.contains('hidden') ? 'none' : (panelInit.style.display || 'none');
+      panelInit.classList.add('hidden');
+    }
+
     await fetchServers();
-    if (opts.showCreate) $('#createPanel').classList.remove('hidden');
+    if (opts.showCreate) { const p = document.getElementById('createPanel'); if (p) { p.style.display='block'; p.classList.remove('hidden'); } }
     const me = $('#meLine'); if (me && state.user) me.textContent = `You are: ${state.user}`;
   }
 
