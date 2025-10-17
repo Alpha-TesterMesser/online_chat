@@ -4,55 +4,107 @@
   <meta charset="utf-8" />
   <title>Chat — Enter username</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="./style.css" />
   <style>
-    body{font-family:system-ui,Arial;margin:0;display:flex;min-height:100vh;align-items:center;justify-content:center;background:#f4f6f8}
-    .card{background:#fff;padding:20px;border-radius:10px;box-shadow:0 8px 30px rgba(2,6,23,0.06);max-width:540px;width:100%}
-    label{display:block;margin-top:8px}
-    input{width:100%;padding:8px;border-radius:8px;border:1px solid #e6e7ea}
-    .row{margin-top:12px;display:flex;gap:8px}
-    button{background:#0b5fff;color:#fff;border:0;padding:9px 12px;border-radius:8px;cursor:pointer}
-    .muted{color:#6b7280;font-size:13px;margin-top:8px}
-    .hint{margin-top:12px;color:#444;font-size:13px}
+    /* small page-specific overrides to match layout used elsewhere */
+    html,body { height:100%; margin:0; }
+    .page-wrap { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:24px; }
+    main.card { max-width:520px; width:100%; text-align:left; }
+    header.page-header { display:flex; justify-content:space-between; align-items:center; width:100%; max-width:520px; margin: 0 auto 12px; padding:6px 12px 0 12px; box-sizing:border-box; }
+    header.page-header h1 { margin:0; font-size:18px; }
+    .center { text-align:center; }
+    label { display:block; margin-top:12px; font-weight:600; }
+    input#usernameInput { margin-top:8px; width:100%; }
+    .row { margin-top:14px; display:flex; gap:8px; justify-content:center; }
+    #closeHint { margin-top:12px; display:none; }
+    small.muted { display:block; margin-top:12px; }
+    button[type="button"] { cursor:pointer; }
   </style>
-  <header style="display:flex; justify-content:space-between; align-items:center;">
-  <div>
-    <h1>Main</h1>
-    <div id="meLine" class="muted"></div>
-  </div>
-  <div style="display:flex; gap:8px; align-items:center;">
-    <button id="themeToggle" class="secondary" aria-pressed="false" title="Toggle theme">
-      🌙 Dark
-    </button>
-  </div>
-</header>
 </head>
-
 <body>
-  <main class="card" role="main" aria-live="polite">
-    <h1>Welcome</h1>
-    <p class="muted">Enter a username — a new about:blank tab will open and host the app inside an iframe (the address bar will show <code>about:blank</code>).</p>
-
-    <label>
-      Username
-      <input id="usernameInput" type="text" maxlength="50" placeholder="e.g. Alice" />
-    </label>
-
-    <div class="row">
-      <button id="enterBtn">Enter</button>
+  <header class="page-header" role="banner">
+    <div>
+      <h1>Chat App</h1>
+      <div id="meLine" class="muted"></div>
     </div>
 
-    <div id="closeHint" class="hint" style="display:none;">
-      If the original tab is still open, you can safely close it now.
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button id="themeToggle" class="secondary" type="button" aria-pressed="false" title="Toggle theme">🌙 Dark</button>
     </div>
+  </header>
 
-    <small class="muted">If popups are blocked we fall back to opening the app in this tab.</small>
-  </main>
+  <div class="page-wrap">
+    <main class="card" role="main" aria-live="polite">
+      <div class="center">
+        <h2 style="margin:0 0 8px 0;">Welcome</h2>
+        <p class="muted" style="margin-bottom:12px;">
+          Enter a username — a new <code>about:blank</code> tab will open and host the app inside an iframe (the address bar will show <code>about:blank</code>).
+        </p>
+      </div>
+
+      <label for="usernameInput">Username</label>
+      <input id="usernameInput" type="text" maxlength="50" placeholder="e.g. Alice" autocomplete="off" />
+
+      <div class="row">
+        <button id="enterBtn" type="button">Enter</button>
+      </div>
+
+      <div id="closeHint" class="muted">
+        If the original tab is still open, you can safely close it now.
+      </div>
+
+      <small class="muted">If popups are blocked we fall back to opening the app in this tab.</small>
+    </main>
+  </div>
 
   <script>
+    // -----------------------
+    // Config
+    // -----------------------
     const TARGET_RELATIVE = './join.html';
 
+    // -----------------------
+    // THEME: apply + persist (defaults to dark)
+    // -----------------------
+    (function themeInit() {
+      const saved = localStorage.getItem('theme');
+      const systemPrefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+      const defaultTheme = saved || (systemPrefersLight ? 'light' : 'dark');
+
+      document.documentElement.setAttribute('data-theme', defaultTheme);
+
+      const btn = document.getElementById('themeToggle');
+      function updateButton(theme) {
+        if (!btn) return;
+        if (theme === 'dark') {
+          btn.textContent = '🌙 Dark';
+          btn.setAttribute('aria-pressed', 'true');
+        } else {
+          btn.textContent = '🌞 Light';
+          btn.setAttribute('aria-pressed', 'false');
+        }
+      }
+      updateButton(defaultTheme);
+
+      btn.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme') || 'dark';
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        updateButton(next);
+      });
+    })();
+
+    // -----------------------
+    // Utilities
+    // -----------------------
     function escapeHtml(s=''){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
+    function computeAbsoluteTarget() {
+      return new URL(TARGET_RELATIVE, location.href).href;
+    }
+
+    // Build the about:blank document that contains a full-window iframe pointing to the app
     function buildAboutBlankWithIframe(username, absoluteTarget) {
       const safe = escapeHtml(username || '');
       return `<!doctype html>
@@ -62,7 +114,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>about:blank</title>
     <style>
-      html,body{height:100%;margin:0;background:#fff}
+      html,body{height:100%;margin:0;background:var(--bg, #000);}
       iframe{position:fixed;inset:0;border:0;width:100%;height:100%}
     </style>
   </head>
@@ -80,10 +132,7 @@
 </html>`;
     }
 
-    function computeAbsoluteTarget() {
-      return new URL(TARGET_RELATIVE, location.href).href;
-    }
-
+    // Try to open about:blank, write iframe, focus it
     function openAboutBlankWithIframe(username) {
       const abs = computeAbsoluteTarget();
       let w = null;
@@ -102,16 +151,15 @@
       }
     }
 
+    // Fallback: replace current tab with a short splash that redirects into the app
     function fallbackReplaceCurrent(username) {
       const abs = computeAbsoluteTarget();
       const safe = escapeHtml(username || '');
       const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<style>html,body{height:100%;margin:0;background:#fff;font-family:system-ui,Arial}</style></head><body>
-  <div style="display:flex;align-items:center;justify-content:center;height:100%">
-    <div style="text-align:center">
-      <div style="font-size:16px">Preparing chat…</div>
-      <div style="color:#444;margin-top:8px">${safe? 'User: '+safe : ''}</div>
-    </div>
+<style>html,body{height:100%;margin:0;background:var(--bg, #000);font-family:Inter,system-ui,Arial;color:var(--text, #fff);display:flex;align-items:center;justify-content:center}</style></head><body>
+  <div style="text-align:center">
+    <div style="font-size:16px">Preparing chat…</div>
+    <div style="color:var(--muted, #888);margin-top:8px">${safe? 'User: '+safe : ''}</div>
   </div>
   <script>setTimeout(function(){ location.href = '${abs}'; }, 120);<\/script>
 </body></html>`;
@@ -120,6 +168,7 @@
       document.close();
     }
 
+    // Try to close original tab; if not possible show hint
     function tryToCloseOriginalTab() {
       try { window.close(); } catch(e){}
       setTimeout(() => {
@@ -127,15 +176,40 @@
       }, 300);
     }
 
+    // -----------------------
+    // Enter button behavior
+    // -----------------------
     document.getElementById('enterBtn').addEventListener('click', () => {
-      const name = document.getElementById('usernameInput').value.trim();
-      if (!name) return alert('Please enter a username');
+      const input = document.getElementById('usernameInput');
+      const name = (input && input.value || '').trim();
+      if (!name) { alert('Please enter a username'); input && input.focus(); return; }
+
       try { localStorage.setItem('username', name); } catch(e){}
+      // Update meLine
+      const meLine = document.getElementById('meLine');
+      if (meLine) meLine.textContent = `You are: ${name}`;
+
       const ok = openAboutBlankWithIframe(name);
       if (!ok) { fallbackReplaceCurrent(name); return; }
       tryToCloseOriginalTab();
     });
 
+    // Autofill + autofocus
+    (function initInputFromStorage() {
+      try {
+        const saved = localStorage.getItem('username');
+        const input = document.getElementById('usernameInput');
+        if (saved) {
+          input.value = saved;
+          const meLine = document.getElementById('meLine');
+          if (meLine) meLine.textContent = `You are: ${saved}`;
+        }
+        // focus on the username field
+        setTimeout(()=>{ try{ input && input.focus(); input && input.select(); }catch(e){} }, 50);
+      } catch(e){}
+    })();
+
+    // If username already present, auto-open exactly like before
     (function autoOpenIfSet() {
       try {
         const existing = localStorage.getItem('username');
@@ -148,5 +222,3 @@
   </script>
 </body>
 </html>
-
-
