@@ -5,64 +5,87 @@
   <title>Servers</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="stylesheet" href="./style.css" />
+  <style>
+    /* small fallback styles in case style.css missing */
+    :root { --bg:#0b0f12; --card:#141a1f; --muted:#9aa5b1; --accent:#7c5cff; }
+    body { margin:0; font-family:Inter,system-ui,Arial; background:radial-gradient(800px 500px at 50% 30%, rgba(124,92,255,0.06), transparent), var(--bg); color:#e6eef6; display:flex; align-items:center; justify-content:center; padding:24px; min-height:100vh; }
+    .card { width:100%; max-width:900px; background:var(--card); padding:18px; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,0.6); }
+    header { display:flex; justify-content:space-between; align-items:center; }
+    h1 { margin:0; font-size:20px; background:linear-gradient(90deg,var(--accent),#00d4ff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .muted { color:var(--muted); font-size:13px; }
+    .controls { display:flex; gap:8px; align-items:center; margin-top:12px; }
+    .row { display:flex; gap:8px; align-items:center; margin-top:8px; }
+    input, select, button, textarea { padding:8px 10px; border-radius:8px; border:1px solid #2d353c; font-size:15px; background:#0f1620; color:#e6eef6; }
+    button { background:linear-gradient(90deg,var(--accent),#00d4ff); color:#fff; border:none; cursor:pointer; }
+    button.secondary { background:transparent; border:1px solid var(--muted); color:var(--muted); }
+    .serverCard { border:1px solid rgba(124,92,255,0.06); padding:10px; border-radius:8px; background:#0f1620; display:flex; justify-content:space-between; gap:12px; margin-top:8px; }
+    .serverInfo { flex:1; }
+    .serverActions { display:flex; gap:8px; align-items:center; }
+    .hidden { display:none; }
+    .modal { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.6); }
+    .modal-content { background:#0b1220; padding:18px; border-radius:10px; width:90%; max-width:420px; color:#e6eef6; }
+  </style>
 </head>
 <body>
-  <main class="card">
-    <header style="display:flex; justify-content:space-between; align-items:center;">
+  <main class="card" role="main" aria-live="polite">
+    <header>
       <div>
         <h1>Servers</h1>
         <div id="meLine" class="muted"></div>
       </div>
 
-      <!-- Right-side header controls: theme toggle + back -->
       <div style="display:flex; gap:8px; align-items:center;">
         <button id="themeToggle" class="secondary" aria-pressed="false" title="Toggle theme">🌙 Dark</button>
-        <button id="backToJoin" class="secondary">Back</button>
+        <button id="backToJoin" class="secondary" type="button">Back</button>
       </div>
     </header>
 
+    <!-- controls -->
     <section class="controls" style="margin-top:12px;">
-      <input id="search" placeholder="Search by name or tag" />
+      <input id="search" placeholder="Search by name or tag" style="flex:1" />
       <input id="tagFilter" placeholder="Filter by tag (single)" style="width:160px"/>
       <select id="sortBy">
         <option value="created">Newest</option>
         <option value="name">Name</option>
         <option value="availability">Availability</option>
       </select>
+      <button id="toggleCreate" class="secondary" type="button">New Server</button>
     </section>
 
-    <section style="display:flex; gap:12px; align-items:center; margin-top:8px;">
-      <label><input type="checkbox" id="filterPublic" checked /> Show Public</label>
-      <label><input type="checkbox" id="filterPrivate" checked /> Show Private</label>
-      <label><input type="checkbox" id="filterHasSpace" /> Only With Space</label>
-      <!-- type="button" prevents accidental form submission -->
-      <button id="toggleCreate" type="button" style="margin-left:auto;">New Server</button>
+    <!-- filter checkboxes -->
+    <section style="display:flex; gap:12px; align-items:center; margin-top:12px;">
+      <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="filterPublic" checked /> <span class="muted">Show Public</span></label>
+      <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="filterPrivate" checked /> <span class="muted">Show Private</span></label>
+      <label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="filterHasSpace" /> <span class="muted">Only With Space</span></label>
     </section>
 
+    <!-- server list -->
     <section id="list" style="margin-top:12px;"></section>
 
+    <!-- create panel (initially hidden) -->
     <section id="createPanel" class="hidden" style="margin-top:12px; display:none;">
-      <h3>Create Server</h3>
+      <h3 style="margin-top:0;">Create Server</h3>
       <label>Server name <input id="sv_name" /></label>
       <label>Tags (comma-separated) <input id="sv_tags" /></label>
       <label>Max occupants <input id="sv_max" type="number" value="8" min="1" /></label>
       <label>Password (leave blank = public) <input id="sv_pass" type="password" /></label>
       <div class="row" style="margin-top:8px;">
-        <button id="sv_create">Create</button>
-        <button id="sv_cancel" class="secondary" type="button">Cancel</button>
+        <button id="sv_create" type="button">Create</button>
+        <button id="sv_cancel" type="button" class="secondary">Cancel</button>
       </div>
-      <div id="createMsg" class="muted"></div>
+      <div id="createMsg" class="muted" style="margin-top:8px;"></div>
     </section>
 
-    <div id="pwdModal" class="modal hidden">
+    <!-- password modal (hidden) -->
+    <div id="pwdModal" class="modal hidden" style="display:none;">
       <div class="modal-content">
-        <h4>Enter server password</h4>
+        <h4 style="margin-top:0;">Enter server password</h4>
         <input id="pwdInput" type="password" />
         <div class="row" style="margin-top:8px;">
-          <button id="pwdSubmit">Submit</button>
-          <button id="pwdBack" class="secondary" type="button">Back</button>
+          <button id="pwdSubmit" type="button">Submit</button>
+          <button id="pwdBack" type="button" class="secondary">Back</button>
         </div>
-        <div id="pwdMsg" class="muted"></div>
+        <div id="pwdMsg" class="muted" style="margin-top:8px;"></div>
       </div>
     </div>
 
@@ -71,26 +94,33 @@
     </div>
   </main>
 
+  <!-- socket.io then client script then inline init -->
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script src="./client.js"></script>
-
   <script>
     (async function init() {
-      const user = localStorage.getItem('username');
-      if (!user) {
-        document.getElementById('missingUserNotice').style.display = 'block';
-        document.getElementById('meLine').textContent = 'You are: (missing)';
-      } else {
-        document.getElementById('meLine').textContent = `You are: ${user}`;
-      }
+      // show user if present
+      try {
+        const user = localStorage.getItem('username');
+        if (!user) {
+          document.getElementById('missingUserNotice').style.display = 'block';
+          document.getElementById('meLine').textContent = 'You are: (missing)';
+        } else {
+          document.getElementById('meLine').textContent = `You are: ${user}`;
+        }
+      } catch (e){}
 
+      // init the client app; show create panel if ?create=1
       const params = new URLSearchParams(location.search);
       const create = params.get('create') === '1';
-
-      await ClientApp.initServers({ showCreate: create });
+      try {
+        await ClientApp.initServers({ showCreate: create });
+      } catch (err) {
+        console.error('initServers failed', err);
+      }
     })();
 
-    // back button should remain simple and iframe-friendly
+    // Back button to join page (redundant if bound in client.js but safe)
     document.getElementById('backToJoin').addEventListener('click', () => {
       location.href = './join.html';
     });
