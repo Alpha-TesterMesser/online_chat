@@ -410,4 +410,81 @@ const ClientApp = (function () {
   }
 
   return { initServers, initChat };
+  // ---------- Bulletproof New-Server Toggle (paste after Log) ----------
+(function bulletproofCreateToggle() {
+  // toggles panel open/close in a deterministic way
+  function togglePanel() {
+    const panel = document.getElementById('createPanel');
+    if (!panel) { Log.warn('Create toggle: createPanel not found'); return; }
+
+    const open = panel.getAttribute('data-open') === 'true';
+    if (open) {
+      panel.setAttribute('data-open', 'false');
+      panel.style.display = 'none';
+      panel.classList.add('hidden');
+      Log.info('Create panel closed (bulletproof toggle)');
+    } else {
+      panel.setAttribute('data-open', 'true');
+      panel.style.display = 'block';
+      panel.classList.remove('hidden');
+      // focus the name input when opening
+      const nameInput = document.getElementById('sv_name');
+      setTimeout(()=>{ try{ nameInput && nameInput.focus(); }catch(e){} }, 40);
+      Log.info('Create panel opened (bulletproof toggle)');
+    }
+  }
+
+  // document-level click handler (capturing) so clicks hit even if element replaced
+  document.addEventListener('click', (ev) => {
+    try {
+      const t = ev.target;
+      const btn = t && (t.id === 'toggleCreate' ? t : (t.closest ? t.closest('#toggleCreate') : null));
+      if (!btn) return;
+      ev.preventDefault && ev.preventDefault();
+      togglePanel();
+    } catch (err) {
+      Log.error('bulletproof toggle click handler error', err);
+    }
+  }, true); // use capture to catch some edge-cases earlier in the event chain
+
+  // Make sure the createPanel starts hidden (inline) and has data-open attribute
+  (function initPanelState() {
+    const panel = document.getElementById('createPanel');
+    if (!panel) return;
+    if (!panel.hasAttribute('data-open')) panel.setAttribute('data-open', 'false');
+    if (!panel.style.display) panel.style.display = panel.classList.contains('hidden') ? 'none' : panel.style.display || 'none';
+    panel.classList.add('hidden');
+  })();
+
+  // MutationObserver to auto-fix/rebind the button if it's re-created or moved
+  const mo = new MutationObserver(() => {
+    try {
+      const btn = document.getElementById('toggleCreate');
+      if (!btn) return;
+      // defensive: ensure it behaves as a non-submit button
+      if (btn.getAttribute('type') !== 'button') {
+        try { btn.setAttribute('type', 'button'); } catch(e){}
+        Log.info('Ensured toggleCreate type=button');
+      }
+      // ensure data-bound marker to avoid repeated logs
+      if (!btn.dataset.bulletproofBound) {
+        btn.dataset.bulletproofBound = '1';
+        Log.info('toggleCreate verified by MutationObserver');
+      }
+      // ensure panel exists and initialized
+      initPanelState();
+    } catch (e) {
+      Log.warn('MutationObserver handler error', e);
+    }
+  });
+
+  // observe entire document for structural changes (lightweight)
+  mo.observe(document.documentElement, { childList: true, subtree: true });
+
+  // small safety: initialize once on DOMContentLoaded (if inserted early)
+  document.addEventListener('DOMContentLoaded', () => {
+    initPanelState();
+    Log.info('Bulletproof create toggle initialized (DOMContentLoaded)');
+  });
 })();
+
